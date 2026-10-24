@@ -22,6 +22,7 @@ import rules
 import agent
 import report_pdf
 import seed
+import blend
 from ml import predictor
 from ml.synth import BYPRODUCTS, WAVELENGTHS, simulate_scan, TARGETS
 from ml.train import train_all, train_dataset, spectral_columns, METRICS, metrics as calc_metrics
@@ -98,6 +99,15 @@ class AgentChatIn(BaseModel):
     session_id: str
     sample_id: Optional[str] = None
     provider: str = "claude"
+
+
+class BlendComponent(BaseModel):
+    source_id: str
+    percent: float = Field(gt=0, le=100)
+
+
+class BlendIn(BaseModel):
+    components: List[BlendComponent] = Field(min_length=2, max_length=5)
 
 
 ALL_LAB_TARGETS = set(rules.COMPOSITION) | set(rules.ANF) | set(rules.SAFETY_NUMERIC) | set(rules.PATHOGENS) | \
@@ -259,6 +269,25 @@ def dashboard():
 def compare():
     reps = [rules.build_report(s["id"]) for s in db.query("SELECT id FROM samples")]
     return {"ranking": agent.compare_types(reps), "demo_data": True}
+
+
+@api.get("/blend/sources")
+def blend_sources():
+    return blend.sources()
+
+
+@api.post("/blend")
+def blend_calc(body: BlendIn):
+    ids = [c.source_id for c in body.components]
+    if len(set(ids)) != len(ids):
+        raise HTTPException(422, "Each component can only be added once.")
+    total = sum(c.percent for c in body.components)
+    if abs(total - 100) > 0.5:
+        raise HTTPException(422, f"Percentages must add up to 100% (currently {total:.1f}%).")
+    try:
+        return blend.blend([c.model_dump() for c in body.components])
+    except ValueError as e:
+        raise HTTPException(422, str(e))
 
 
 @api.get("/thresholds")

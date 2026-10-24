@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { NavLink, Outlet, Link } from "react-router-dom";
 import { useTheme } from "next-themes";
-import { LayoutDashboard, FlaskConical, ListChecks, BarChart3, BrainCircuit, Bot, SlidersHorizontal, Map, Moon, Sun, Menu, X, Plus, Sprout } from "lucide-react";
+import { LayoutDashboard, FlaskConical, ListChecks, BarChart3, BrainCircuit, Bot, SlidersHorizontal, Map, Moon, Sun, Menu, X, Plus, Sprout, Blend } from "lucide-react";
 import { SafetyBanner, DemoBadge } from "@/components/common";
 
 const NAV = [
@@ -9,6 +9,7 @@ const NAV = [
   ["/new", "New analysis", FlaskConical],
   ["/samples", "Samples", ListChecks],
   ["/compare", "Compare", BarChart3],
+  ["/blender", "Blender", Blend],
   ["/models", "Model performance", BrainCircuit],
   ["/agent", "Analysis Agent", Bot],
   ["/rules", "Safety rules", SlidersHorizontal],

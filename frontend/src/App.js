@@ -13,6 +13,7 @@ import ModelPerformance from "@/pages/ModelPerformance";
 import AgentPage from "@/pages/AgentPage";
 import Rules from "@/pages/Rules";
 import Roadmap from "@/pages/Roadmap";
+import Blender from "@/pages/Blender";
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
               <Route path="/samples" element={<Samples />} />
               <Route path="/samples/:id" element={<SampleReport />} />
               <Route path="/compare" element={<Compare />} />
+              <Route path="/blender" element={<Blender />} />
               <Route path="/models" element={<ModelPerformance />} />
               <Route path="/agent" element={<AgentPage />} />
               <Route path="/rules" element={<Rules />} />

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Trophy } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Trophy, Blend } from "lucide-react";
 import { api, BP, fmt } from "@/lib/api";
 import { PageHeader, Section, CardSkeleton, Note, Term } from "@/components/common";
 import { Plot } from "@/components/Charts";
@@ -14,7 +15,8 @@ export default function Compare() {
   useEffect(() => { api.get("/compare").then((r) => setRows(r.data.ranking)); }, []);
   return (
     <div>
-      <PageHeader eyebrow="Ranking" title="Compare by-products" desc="Averages over all samples of each type. Use the ranking to prioritise further lab work, not to choose an ingredient." />
+      <PageHeader eyebrow="Ranking" title="Compare by-products" desc="Averages over all samples of each type. Use the ranking to prioritise further lab work, not to choose an ingredient."
+        actions={<Link to="/blender" data-testid="compare-open-blender" className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"><Blend className="h-4 w-4" /> Try mixing in the Blender</Link>} />
       {!rows ? <CardSkeleton rows={6} /> : (
         <div className="space-y-6">
           <div className="grid gap-4 md:grid-cols-5">
