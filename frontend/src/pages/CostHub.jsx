@@ -27,11 +27,11 @@ export default function CostHub() {
   const demo = samples?.find((s) => s.sample_code === "DEMO-FIX-01") || samples?.[0];
   const ctxVal = sp.get("sample") ? `sample:${sp.get("sample")}` : sp.get("bp") ? `bp:${sp.get("bp")}` : demo ? `sample:${demo.id}` : null;
   const ctx = useMemo(() => (!ctxVal ? null : ctxVal.startsWith("sample:") ? { sample_id: ctxVal.slice(7) } : { byproduct: ctxVal.slice(3) }), [ctxVal]);
-  const setCtx = (v) => setSp((p) => { const n = new URLSearchParams(p); n.delete("sample"); n.delete("bp"); n.delete("focus"); n.delete("problem"); n.set(v.startsWith("sample:") ? "sample" : "bp", v.split(":")[1]); return n; }, { replace: true });
+  const setCtx = (v) => setSp((p) => { const n = new URLSearchParams(p); n.delete("sample"); n.delete("bp"); n.delete("focus"); n.delete("problem"); n.delete("scenario"); n.set(v.startsWith("sample:") ? "sample" : "bp", v.split(":")[1]); return n; }, { replace: true });
   const problem = sp.get("problem") || "all", scenario = sp.get("scenario") || "auto";
   const cfocus = useFocus(focus, !!comp);
   const detected = new Set((est?.problems || []).map((p) => p.problem));
-  const pdf = est && `${API}/hub/pdf?${new URLSearchParams({ ...(ctx || {}), fixes: est.fixes_used.join(","), scenario: est.scenario, batch_kg: est.inputs.batch_kg, raw_price: est.inputs.raw_price, failure_prob: est.inputs.failure_prob })}`;
+  const pdf = est && `${API}/hub/pdf?${new URLSearchParams({ ...(ctx || {}), fixes: est.fixes_used.join(","), scenario: est.scenario, batch_kg: est.inputs.batch_kg, raw_price: est.inputs.raw_price, failure_prob: est.inputs.failure_prob, ...(Math.abs(est.inputs.yield_pct - est.inputs.default_yield_pct) > 0.01 ? { yield_pct: est.inputs.yield_pct } : {}) })}`;
 
   return (
     <div>

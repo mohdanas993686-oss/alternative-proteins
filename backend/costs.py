@@ -399,7 +399,7 @@ def estimate(ctx, fix_ids=None, ov=None, scenario=None, light=False):
         "context": ctx, "profile": {k: prof[k] for k in ("kind", "id", "label", "byproduct", "overall_status", "safety_block")},
         "values_before": prof["values"], "problems": prof["problems"],
         "options": {p: [f["id"] for f in fs] for p, fs in fx.options(bp, prof["problems"], list(cat.values())).items()},
-        "recommended": [f["id"] for f in fx.recommended(bp, prof["problems"], list(cat.values()))],
+        "recommended": [] if prof["safety_block"] else [f["id"] for f in fx.recommended(bp, prof["problems"], list(cat.values()))],
         "fixes_used": [f["id"] for f in chosen], "scenario": scen, "auto_scenario": auto, "safety_block": block,
         "scale": fd["scale"], "batch_kg": fd["batch_kg"], "raw_price": fd["raw_price"],
         "inputs": {"batch_kg": fd["batch_kg"], "raw_price": ov.get("raw_price", a["raw_price"][bp]["typical"]),

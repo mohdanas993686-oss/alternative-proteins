@@ -34,13 +34,15 @@ export const PairedBars = ({ items, testid = "paired-bars" }) => (
 );
 
 export function BeforeAfter({ est, focused }) {
-  const ba = est.before_after;
+  const rejected = est.scenario === "rejected";
+  const ba = rejected ? est.before_after.map((p) => ({ ...p, after: p.before, pass_after: p.pass_before })) : est.before_after;
   const failing = ba.filter((p) => !p.pass_before);
   const crossed = failing.filter((p) => p.pass_after);
-  const title = !failing.length ? "All measured parameters are already within placeholder limits"
-    : `${crossed.length} of ${failing.length} failing parameters move inside the limit after the fixes (projected), ready to retest`;
+  const title = rejected ? `${failing.length} parameter(s) outside placeholder limits; no fix applied: divert or reject, human review required`
+    : !failing.length ? "All measured parameters are already within placeholder limits"
+      : `${crossed.length} of ${failing.length} failing parameters move inside the limit after the fixes (projected), ready to retest`;
   return (
-    <ChartCard id="before_after" eyebrow="Before vs after" title={title} projected focused={focused}
+    <ChartCard id="before_after" eyebrow={rejected ? "Measured vs limits" : "Before vs after"} title={title} projected={!rejected} focused={focused}
       data={{ columns: ["Parameter", "Unit", "Before", "After (projected)", "Limit", "Within limit after"], rows: ba.map((p) => [p.label, p.unit, p.before, p.after, p.limit, p.pass_after ? "yes" : "no"]) }}>
       <PairedBars items={ba} />
     </ChartCard>
@@ -60,8 +62,8 @@ export function Gauges({ est, focused }) {
   const pb = est.values_before.protein, pa = est.values_after.protein;
   const cd = conv(a.per_kg_dig), cb = conv(b.per_kg_dig);
   return (
-    <ChartCard id="gauges" eyebrow="Key metrics" projected cost focused={focused}
-      title={`Projected: protein ${pb?.toFixed(0)}→${pa?.toFixed(0)}% DM, yield ${a.mass_yield_pct.toFixed(0)}%, ${money(a.per_kg_dig)}/kg digestible protein`}
+    <ChartCard id="gauges" eyebrow="Key metrics" projected={est.auto_scenario !== "rejected"} cost focused={focused}
+      title={est.auto_scenario === "rejected" ? "As-is reference only: this batch is diverted or rejected, human review required" : `Projected: protein ${pb?.toFixed(0)}→${pa?.toFixed(0)}% DM, yield ${a.mass_yield_pct.toFixed(0)}%, ${money(a.per_kg_dig)}/kg digestible protein`}
       data={{ columns: ["Metric", "Before / as-is", "After (projected)"], rows: [["Protein % DM", pb, pa], ["Usable protein g/kg", b.usable_protein_g_per_kg, a.usable_protein_g_per_kg], ["Cost per kg digestible protein (INR)", b.per_kg_dig, a.per_kg_dig], ["Mass yield %", b.mass_yield_pct, a.mass_yield_pct]] }}>
       <div className="grid grid-cols-2 gap-2">
         <Gauge testid="gauge-protein" title="Protein (% DM)" value={pa} ref0={pb} range={[0, 100]} suffix="%" threshold={40} />

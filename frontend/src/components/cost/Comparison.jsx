@@ -214,12 +214,12 @@ export function RankChange({ items, lines, weights, focused }) {
   );
 }
 
-export function VerdictCard({ items, metric, focused, caveat }) {
+export function VerdictCard({ items, metric, focused, caveat, refKey }) {
   const { money } = useMoney();
   const label = METRICS.find(([k]) => k === metric)[1];
   const sorted = [...items].sort((a, b) => a[metric].typical - b[metric].typical);
   const bps = sorted.filter((i) => i.kind === "byproduct"), conv = sorted.filter((i) => i.kind === "conventional");
-  const best = bps[0];
+  const best = bps.find((i) => i.key === refKey) || bps[0];
   const ref = conv.find((c) => c.key === "spc") || conv[0];
   if (!best || !ref) return null;
   const rel = relation(best[metric], ref[metric]);
@@ -227,19 +227,19 @@ export function VerdictCard({ items, metric, focused, caveat }) {
   const text = `${best.name}: estimated ${money(best[metric].low)}–${money(best[metric].high)} ${label} vs ${money(ref[metric].low)}–${money(ref[metric].high)} for ${ref.name.toLowerCase()}: ${word} it under current assumptions.`;
   const pod = sorted.slice(0, 3);
   return (
-    <ChartCard id="verdict" eyebrow="Verdict" cost focused={focused} title={text}
+    <ChartCard id="verdict" eyebrow={best === bps[0] ? "Verdict · lowest-cost by-product" : "Verdict · selected by-product"} cost focused={focused} title={text}
       data={{ columns: ["Conventional source", `Relation of ${best.name}`], rows: conv.map((c) => [c.name, relation(best[metric], c[metric])]) }}>
-      <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-        <div className="flex items-end justify-center gap-3" data-testid="verdict-podium" aria-label="Podium: lowest cost first">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.2fr]">
+        <div className="flex min-w-0 items-end justify-center gap-2 sm:gap-3" data-testid="verdict-podium" aria-label="Podium: lowest cost first">
           {[pod[1], pod[0], pod[2]].filter(Boolean).map((i) => { const r = sorted.indexOf(i); const h = [130, 100, 80][r]; return (
-            <div key={i.key} className="flex w-28 flex-col items-center gap-1 text-center">
+            <div key={i.key} className="flex w-24 flex-col items-center gap-1 text-center sm:w-28">
               {r === 0 ? <Trophy className="h-5 w-5 text-amber-500" /> : <Medal className="h-5 w-5 text-stone-400" />}
               <p className="line-clamp-2 text-[11px] font-semibold leading-tight">{i.name}</p>
               <p className="font-mono text-[11px]">{money(i[metric].typical)}</p>
               <div className="flex w-full items-start justify-center rounded-t-xl pt-2 font-display text-2xl font-extrabold text-white transition-[height] duration-700" style={{ height: h, background: colorOf(i), backgroundImage: i.kind === "conventional" ? STRIPES : undefined }}>{r + 1}</div>
             </div>); })}
         </div>
-        <div className="space-y-3">
+        <div className="min-w-0 space-y-3">
           <p className="eyebrow">{best.name} vs each conventional source</p>
           <ul className="flex flex-wrap gap-2" data-testid="verdict-strip">
             {conv.map((c) => { const [col, Icon, l] = REL[relation(best[metric], c[metric])]; return (
@@ -279,7 +279,7 @@ export default function ComparisonSection({ data, refKey, focus, focused: F = ()
       </div>
       <ServingPlate items={items} focused={F("serving")} />
       <CriteriaPanel items={items} weights={weights} setWeights={setWeights} hl={hl} setHl={setHl} focused={F("criteria_radar")} />
-      <VerdictCard items={items} metric={metric} caveat={data.caveat} focused={F("verdict")} />
+      <VerdictCard items={items} metric={metric} caveat={data.caveat} refKey={ref} focused={F("verdict")} />
     </div>
   );
 }

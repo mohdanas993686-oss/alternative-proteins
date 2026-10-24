@@ -51,8 +51,8 @@ export default function StackBuilder({ est, fixes, stack, setStack, problemFilte
         <button data-testid="stack-recommended-btn" onClick={() => setStack(est.recommended)} className="inline-flex h-8 items-center gap-1 rounded-full border px-3 text-xs font-semibold hover:bg-accent"><RotateCcw className="h-3.5 w-3.5" /> Recommended</button>
         <button data-testid="stack-clear-btn" onClick={() => setStack([])} className="inline-flex h-8 items-center gap-1 rounded-full border px-3 text-xs font-semibold hover:bg-accent"><Trash2 className="h-3.5 w-3.5" /> Clear</button>
       </>}>
-      <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
-        <div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_1fr]">
+        <div className="min-w-0">
           <p className="eyebrow mb-2">Drag a fix (or press +)</p>
           <ul className="max-h-[330px] space-y-1.5 overflow-y-auto pr-1" data-testid="stack-palette">
             {pal.map((f) => {

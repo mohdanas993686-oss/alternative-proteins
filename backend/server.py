@@ -594,18 +594,19 @@ def import_conventional(file: UploadFile = File(...)):
             continue
         conv = 1 / fxr[cur]
         try:
-            b = ConvIn(**{k: r[k] for k in fx.CONV_FIELDS if k in df.columns and r[k] != ""},
+            b = ConvIn(**{k: r[k] for k in fx.CONV_FIELDS if k in df.columns and r[k] != "" and k not in ("price_low", "price_typical", "price_high")},
                        **{k: float(r[k]) * conv for k in ("price_low", "price_typical", "price_high")})
             d = _conv_row(b)
         except Exception as e:
             errors.append(f"row {i + 2}: {getattr(e, 'detail', None) or str(e).splitlines()[0]}")
             continue
+        ph = int("PLACEHOLDER" in (d["price_source"] or "").upper())
         ex = db.one("SELECT id FROM conventional_sources WHERE lower(key)=lower(?) OR lower(name)=lower(?)", (d["key"], d["name"]))
         if ex:
             sets = ",".join(f"{k}=?" for k in d)
-            db.execute(f"UPDATE conventional_sources SET {sets}, placeholder=0, updated_at=? WHERE id=?", (*d.values(), db.now(), ex["id"]))
+            db.execute(f"UPDATE conventional_sources SET {sets}, placeholder=?, updated_at=? WHERE id=?", (*d.values(), ph, db.now(), ex["id"]))
         else:
-            db.insert("conventional_sources", {"id": db.new_id(), **d, "placeholder": 0, "created_at": db.now(), "updated_at": db.now()})
+            db.insert("conventional_sources", {"id": db.new_id(), **d, "placeholder": ph, "created_at": db.now(), "updated_at": db.now()})
         done += 1
     return {"imported": done, "errors": errors}
 

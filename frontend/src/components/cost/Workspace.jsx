@@ -83,7 +83,7 @@ export default function Workspace({ ctx, problem = "all", scenario = "auto", foc
 
       <SectionTitle n="01" title="Fix" hint="problem → fix options → outcome" />
       <ChartCard id="fix_finder" eyebrow="Fix Finder" focused={F("fix_finder")}
-        title={est.problems.length ? `${est.problems.length} problem(s) found: ${est.problems.filter((p) => p.category === "safety").length ? "safety failures end in divert or reject" : "every branch has a fix option"}; click a fix for details` : "No problems detected: no corrective action needed"}
+        title={est.problems.length ? `${est.problems.length} problem(s) found: ${est.problems.some((p) => p.category === "safety" && p.status === "FAIL") ? "safety failures end in divert or reject" : est.problems.some((p) => p.category === "safety") ? "safety flags need human review" : "every branch has a fix option"}; click a fix for details` : "No problems detected: no corrective action needed"}
         data={{ columns: ["Problem", "Status", "Fix options"], rows: est.problems.map((p) => [p.label, p.status, (est.options[p.problem] || []).map((i) => fmap[i]?.action).join(" | ")]) }}>
         <FixFinder est={est} cat={fmap} problemFilter={problem} stack={stack || []} {...share} />
       </ChartCard>

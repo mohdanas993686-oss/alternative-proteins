@@ -1,0 +1,52 @@
+{
+  "summary": "First test of Add-on 2 (Cost & Fix Hub, Story mode, Reference prices, and cost charts in the sample PDF). Backend: I wrote test_cost_hub_api.py with 27 tests. 26 pass after I fixed one bug. The full suite of 66 tests (including the older byproduct and blender tests) has 65 passing. Bug I fixed: CSV import at POST /api/conventional/import rejected every row, including the app's own template ('ConvIn() got multiple values for keyword argument price_low'). I fixed it with one line in server.py. One failing test remains, and it is a real issue: in the PDF for a safety-blocked sample, the KPI table says 'Mass yield after fixes (projected) 98% (980 kg of 1,000 kg)' and gives a cost per kg of product, while the mass-flow section of the same PDF says all 1,000 kg leaves the food chain. The sample report PDF works for all 24 samples. Text extraction with pymupdf finds every requested heading for DEMO-FIX-01. For the AFLA and CLEAN samples the fix radar is left out, and the CLEAN sample also has no fix finder; this is by design, since those parts only appear when there is a fix stack or problems. No banned 'safe' wording found. Frontend: everything requested works with no page errors. Checked: nav link, default DEMO-FIX-01 context, filters and URL params, fix finder and fix detail sheet with add/remove, stack builder (add/remove/recommended/clear), all 15 workspace charts plus the 7 comparison charts, what-if sliders, saving a scenario, scenario cards, currency INR/USD/EUR, assumptions save with toast and refresh, empty-field validation, Hub PDF download, Story mode (7 steps, next/prev/dots/arrow keys, context switch, finish), Reference prices (add, low>typical error toast, edit, delete, CSV import, comparison refresh, template link), open-hub-btn and export-pdf-btn on the sample report, and all 10 nav pages for regression. Remaining issues: safety-block wording on screen and in the PDF, the batch slider snapping, the verdict naming the wrong by-product, and mobile overflow.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/conventional/import", "issue": "FIXED by testing agent. Every row failed with 'ConvIn() got multiple values for keyword argument price_low', because the price fields were passed twice (once in the CONV_FIELDS dict and again in the converted-price dict). The import feature, including re-importing the template, was completely broken.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "GET /api/report/{id}/pdf and /api/hub/pdf (hub_pdf.cost_section)", "issue": "Safety-blocked or rejected sample (DEMO-AFLA-01): the KPI table still shows 'Mass yield after fixes (projected) 98% (980 kg of 1,000 kg)' and 'Cost per kg product INR 77-97', which contradicts 'all 1,000 kg leaves the food chain'. The scenario table and donuts also show 'Needs fixes INR 85.7 per kg product' for a batch that no fix can save. When safety_block is true, replace these with rejected values or N/A, and label 'Needs fixes' as not applicable."},
+      {"endpoint": "POST /api/cost/estimate", "issue": "For DEMO-AFLA-01 (safety_block true), the response has recommended=['fx18','fx05'] (quality fixes). fixes_used is correctly [], but returning recommendations for a rejected batch invites the UI ('Recommended' button) to build a fix line for it. Return recommended=[] when safety_block is true."},
+      {"endpoint": "POST /api/conventional/import", "issue": "Import always sets placeholder=0, so re-importing the PLACEHOLDER template marks the seeded rows as non-placeholder, even though price_source still says PLACEHOLDER. I restored placeholder=1 on the seeded rows after my test."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "WhatIf batch slider (CostCharts.jsx)", "issue": "The slider's value comes from est.inputs (the server response), not local state, and its step grid starts at log10(50). Effects: the first touch snaps 1,000 kg to 998 kg, and you can never select round values like 1,000 kg. Pressing ArrowLeft 100 times left it at 998 kg because the value resets to the server value on every re-render during the 250 ms debounce. Fix: keep the slider value in local state (or derive it from ov), and use a step grid that hits round numbers.", "selector": "[data-testid='whatif-batch']", "priority": "MEDIUM"},
+      {"component": "Hub mobile layout (StackBuilder)", "issue": "At 390px the hub scrolls sideways (scrollWidth 554). The cause is StackBuilder's `grid gap-4 lg:grid-cols-[260px_1fr]`: there is no grid-cols-1 or min-w-0 below lg, so stack-palette and stack-conveyor push the page to 554px wide. This is the same pattern as the Blender bug in iteration 2. Reference prices overflows slightly too (397px).", "selector": "[data-testid='stack-conveyor']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Hub PDF link", "issue": "CostHub.jsx builds the hub-pdf-btn href without yield_pct (and other overrides). If the user moves the yield slider, the PDF ignores it.", "affected_selectors": ["[data-testid='hub-pdf-btn']"]}
+    ],
+    "design_issues": [
+      {"screen": "Hub / Story with safety-blocked sample (DEMO-AFLA-01)", "issues": ["The before_after headline reads '0 of 3 failing parameters move inside the limit after the fixes (projected), ready to retest' with an 'After fix (projected)' tag. A rejected batch is not 'ready to retest'. Use the PDF's wording instead: 'no fix applied: divert or reject, human review'.", "The scenarios headline reads 'Needs fixes costs 0% more per kg than passing first time'. This is meaningless for a safety block; the Needs fixes and Passes cards should be greyed out or marked N/A."]},
+      {"screen": "Verdict card (hub and story step 7)", "issues": ["VerdictCard ignores refKey and always describes the best by-product. With DEMO-FIX-01 (groundnut cake) selected, the verdict says 'Guar meal: estimated ...', while range_bars on the same page talks about groundnut cake. Pass the selected context's refKey to VerdictCard, or label it 'Best by-product'."]},
+      {"screen": "Hub filter bar", "issues": ["Changing the context keeps the scenario param (e.g. scenario=rejected carries over to the next sample). Consider resetting it, as you already do for problem."]},
+      {"screen": "Fix Finder title for DEMO-FIX-01", "issues": ["It says 'safety failures end in divert or reject', but the only safety-category problem is an allergen with REVIEW status, not a failure."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_cost_hub_api.py", "/app/test_reports/pytest/pytest_cost_hub.xml"],
+  "action_items": [
+    "hub_pdf.cost_section: when est['safety_block'] or scenario=='rejected', do not show 'Mass yield after fixes'/per-kg-product KPIs or a 'Needs fixes' per-kg product value; show N/A or rejected values",
+    "costs.estimate: return recommended=[] when safety_block is true",
+    "OutcomeCharts BeforeAfter and CostCharts ScenarioCards: use rejected-specific headlines for safety blocks (no 'ready to retest', no 'Needs fixes costs 0% more')",
+    "CostCharts WhatIf: make the sliders use local or ov state so keyboard and drag work, and let the batch slider hit round values (1,000 kg)",
+    "StackBuilder: add grid-cols-1 and min-w-0 so the hub has no horizontal scroll at 390px",
+    "Comparison VerdictCard: use the selected refKey, or label the card 'best by-product'",
+    "CostHub.jsx: include yield_pct in the hub PDF query",
+    "Optional: import should keep placeholder=1 when price_source contains PLACEHOLDER"
+  ],
+  "critical_code_review_comments": [
+    "server.py import_conventional had a duplicate-kwarg bug that no test caught; the new pytest now covers it",
+    "Workspace.jsx: the slider value is bound to the server response while the overrides are debounced, which gives a jittery controlled input",
+    "There is no single source of truth for 'safety-blocked' wording: the PDF has a rejected-specific path for before/after, but the on-screen components do not",
+    "server.py is 795 lines; consider moving the cost, conventional and hub routes into a router module"
+  ],
+  "updated_files": ["/app/backend/server.py (import_conventional: exclude price keys from the first kwargs dict)", "/app/backend/tests/test_cost_hub_api.py"],
+  "success_rate": {"backend": "96% (26/27 Add-on 2 tests; 65/66 overall). The 1 failure is the rejected-PDF KPI wording; the CSV import bug was fixed", "frontend": "about 92%: all requested flows work; slider snapping, safety-block wording, verdict reference and mobile overflow remain"},
+  "seed_data_creation": "Created and deleted TEST sources (TEST UI Source, TEST_UI_csv, TEST_csv_src, TEST_src_*) and the TEST_scn / TEST_UI_scn scenarios. Assumptions batch_kg was restored to 1000. Seeded conventional rows had placeholder reset to 1 directly in SQLite (/app/backend/data/byproduct.db) after the template re-import test.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run with: export REACT_APP_BACKEND_URL=...; pytest /app/backend/tests/test_cost_hub_api.py -n 0. Use -n 0 because the assumptions test changes the global batch_kg temporarily. test_rejected_pdf_kpis_do_not_claim_product should pass once the main agent fixes the safety-block KPIs. Range inputs: Playwright fill() fails on them, so use a native value setter plus an input event. Sample IDs: DEMO-FIX-01=c7c4901c64ce, DEMO-AFLA-01=00820c6204b0, DEMO-CLEAN-01=458d81b9537a. Agent cost tools were not tested, as requested.",
+  "test_credentials": "None required (no auth)."
+}

@@ -63,7 +63,7 @@ export default function StoryMode() {
       case 3: return <Waterfall est={est} />;
       case 4: return <ScenarioCards est={est} onPick={setScenario} />;
       case 5: return <CostRace items={comp.items} metric={metric} setMetric={setMetric} hl={hl} setHl={setHl} />;
-      default: return <VerdictCard items={comp.items} metric={metric} caveat={comp.caveat} />;
+      default: return <VerdictCard items={comp.items} metric={metric} caveat={comp.caveat} refKey={est?.profile.byproduct} />;
     }
   };
 

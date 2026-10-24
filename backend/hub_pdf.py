@@ -107,8 +107,15 @@ def donuts(est):
     act = est["scenario"]
     d.add(String(0, 131, "Scenario comparison: cost split per batch (donut) and cost per kg", fontName="Helvetica-Bold", fontSize=8))
     cw = W / 3
+    blocked = est["auto_scenario"] == "rejected"
     for k, s in enumerate(est["scenarios"]):
         x0, tone = k * cw, SCEN_COL[s["key"]]
+        if blocked and s["key"] != "rejected":
+            d.add(Rect(x0 + 2, 120, cw - 8, 4, fillColor=GREY, strokeColor=None))
+            d.add(String(x0 + 8, 108, s["name"], fontName="Helvetica-Bold", fontSize=7.5, fillColor=GREY))
+            d.add(String(x0 + 8, 92, "N/A", fontName="Helvetica-Bold", fontSize=12, fillColor=GREY))
+            d.add(String(x0 + 8, 82, "Safety failure: no fix makes this batch safe", fontSize=6.5, fillColor=GREY))
+            continue
         if s["key"] == act:
             d.add(Rect(x0 + 2, 18, cw - 8, 106, fillColor=None, strokeColor=tone, strokeWidth=1.2))
         d.add(Rect(x0 + 2, 120, cw - 8, 4, fillColor=tone, strokeColor=None))
@@ -156,8 +163,10 @@ def fix_tree(est, cat):
     n = sum(max(len(o), 1) for _, o in rows)
     h = 22 + n * RH + GAP * len(rows)
     d = Drawing(W, h)
-    d.add(String(0, h - 9, f"Fix finder: {len(rows)} problem(s) -> fix options. Safety failures end in divert or reject (human review).",
-                 fontName="Helvetica-Bold", fontSize=8))
+    fail = any(p["category"] == "safety" and p["status"] == "FAIL" for p, _ in rows)
+    tail = "Safety failures end in divert or reject (human review)." if fail else \
+        "Safety flags need human review." if any(p["category"] == "safety" for p, _ in rows) else "Every branch has a fix option."
+    d.add(String(0, h - 9, f"Fix finder: {len(rows)} problem(s) -> fix options. {tail}", fontName="Helvetica-Bold", fontSize=8))
     used, y = set(est["fixes_used"]), h - 22
     px, fxx, tx, bw = 0, 170, 400, 150
     for p, opts in rows:
@@ -305,7 +314,15 @@ def cost_section(est, comp, ss=None):
     el = [Paragraph("Fixes and cost (illustrative)", ss["Heading2"]),
           Paragraph("<b>Illustrative, replace with real quotes.</b> All prices are PLACEHOLDER INR assumptions. " + est["caveat"], warn), Spacer(1, 6)]
     fx = m["fixes"]
-    kpi = [["Metric", "Value"], ["Scenario shown", est["scenario"]],
+    blocked = est["auto_scenario"] == "rejected"
+    if est["scenario"] == "rejected" or blocked:
+        rj = m["rejected"]
+        kpi = [["Metric", "Value"], ["Scenario shown", "Rejected or diverted (human review required)"],
+               ["Product for food use", f"None: all {est['batch_kg']:,.0f} kg is diverted or rejected"],
+               ["Cost of the rejected batch", inr(rj["total"])], ["Loss per kg raw material", inr(rj["loss_per_kg_raw"], 1)]]
+    else:
+        kpi = None
+    kpi = kpi or [["Metric", "Value"], ["Scenario shown", est["scenario"]],
            ["Cost per kg product", f"{inr(rng['per_kg_product']['low'])} - {inr(rng['per_kg_product']['high'])}"],
            ["Cost per kg protein", f"{inr(rng['per_kg_protein']['low'])} - {inr(rng['per_kg_protein']['high'])}"],
            ["Cost per kg digestible protein", f"{inr(rng['per_kg_dig']['low'])} - {inr(rng['per_kg_dig']['high'])}"],
@@ -329,7 +346,9 @@ def cost_section(est, comp, ss=None):
     el += [sankey(est), Spacer(1, 6)]
     el += [waterfall(est["waterfall"]["items"], est["waterfall"]["unit"]), Spacer(1, 6)]
     el += [donuts(est), Spacer(1, 6)]
+    na = "Not applicable: safety failure"
     sc = [["Scenario", "Total per batch", "Per kg product", "Per kg digestible protein"]] + [
+        [s["name"], na, "-", "-"] if blocked and s["key"] != "rejected" else
         [s["name"], inr(s["total"]), inr(s["per_kg_product"]) if s["per_kg_product"] else f"no product (loss {inr(s['loss_per_kg_raw'], 1)}/kg raw)",
          inr(s["per_kg_dig"])] for s in est["scenarios"]]
     el += [_table(sc, [50 * mm, 40 * mm, 50 * mm, 40 * mm]), Spacer(1, 8)]
