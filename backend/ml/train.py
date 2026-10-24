@@ -42,11 +42,11 @@ def metrics(y, p):
             "r2": float(r2_score(y, p)) if len(y) > 1 else 0.0, "bias": float(np.mean(p - y))}
 
 
-def build_models(n_train):
+def build_models(n_train, n_groups=10):
     max_pc = max(2, min(12, n_train // 3))
     pls = GridSearchCV(Pipeline([("prep", preprocessor()), ("m", PLSRegression(scale=False))]),
                        {"m__n_components": list(range(2, max_pc + 1))}, scoring="neg_root_mean_squared_error",
-                       cv=GroupKFold(3))
+                       cv=GroupKFold(2 if n_groups < 9 else 3))
     svr = TransformedTargetRegressor(
         regressor=Pipeline([("prep", preprocessor()), ("sc", StandardScaler()), ("m", SVR(C=10, gamma="scale", epsilon=0.05))]),
         transformer=StandardScaler())
@@ -56,11 +56,6 @@ def build_models(n_train):
 
 def reliable(target, r2):
     return r2 >= (0.8 if target in ANF_TARGETS else 0.7)
-
-
-def _fit_predict(model, X, y, groups, fit_params):
-    model.fit(X, y, **fit_params)
-    return model
 
 
 def train_dataset(df, progress=None, save=True, model_dir=MODEL_DIR):
@@ -74,12 +69,12 @@ def train_dataset(df, progress=None, save=True, model_dir=MODEL_DIR):
     model_dir.mkdir(parents=True, exist_ok=True)
     for i, (t, bp) in enumerate(jobs):
         sub = df[(df["byproduct"] == bp) & df[t].notna()]
-        if len(sub) < 12 or sub["batch_id"].nunique() < 4:
+        if len(sub) < 15 or sub["batch_id"].nunique() < 5:
             continue
         X, y, g = sub[wcols].values, sub[t].values, sub["batch_id"].values
         tr, te = next(GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=7).split(X, y, g))
         cands = {}
-        for name, model in build_models(len(tr)).items():
+        for name, model in build_models(len(tr), len(set(g[tr]))).items():
             fit_kw = {"groups": g[tr]} if name == "PLSR" else {}
             cv_pred = cross_val_predict(model, X[tr], y[tr], groups=g[tr], cv=GroupKFold(3),
                                         params=fit_kw or None).ravel()

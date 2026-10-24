@@ -25,7 +25,7 @@ const ScoreCard = ({ sc, overall }) => (
       <div className="pb-1 text-sm text-muted-foreground">/ 100<br />base {sc.base_score} × safety {sc.safety_multiplier}</div>
     </div>
     <div className="mt-4 h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary transition-all duration-700" style={{ width: `${sc.score}%` }} /></div>
-    <p className="mt-4 text-sm"><b>{sc.safe_usable_protein_g_per_kg} g/kg</b> safe usable protein · screening <StatusBadge status={overall} testid="overall-status-badge" /></p>
+    <p className="mt-4 text-sm"><b>{sc.usable_protein_g_per_kg} g/kg</b> usable protein (safety-adjusted) · screening <StatusBadge status={overall} testid="overall-status-badge" /></p>
     <details className="mt-4 rounded-xl border bg-background/50 p-3 text-sm" data-testid="score-explanation">
       <summary className="flex cursor-pointer items-center gap-2 font-semibold"><Calculator className="h-4 w-4" /> How is this calculated?</summary>
       <p className="mt-2 text-xs text-muted-foreground">{sc.explanation}</p>

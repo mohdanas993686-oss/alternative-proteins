@@ -30,7 +30,7 @@ from ml.generate_data import DATASET
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="ByProduct Analyser API (DEMO DATA)",
+app = FastAPI(title="ByProduct Analyser API (DEMO DATA)", docs_url="/api/docs", redoc_url="/api/redoc", openapi_url="/api/openapi.json",
               description="NIR composition prediction, rule-based safety screening and agentic analysis. "
                           "Trained on synthetic data. Does not certify food safety.")
 api = APIRouter(prefix="/api")
@@ -311,7 +311,7 @@ def train_status():
 
 @api.get("/train/template")
 def train_template():
-    df = pd.read_csv(DATASET).groupby("byproduct").head(12)
+    df = pd.read_csv(DATASET).groupby("byproduct").tail(40)
     return Response(df.to_csv(index=False), media_type="text/csv",
                     headers={"Content-Disposition": 'attachment; filename="byproduct_template_DEMO.csv"'})
 
@@ -331,6 +331,8 @@ def train_upload(file: UploadFile = File(...), mode: str = Form("evaluate")):
         raise HTTPException(422, f"Unknown by-product values: {sorted(bad)}")
     if mode == "train":
         out = train_dataset(df.copy(), save=False)
+        if not out["best"]:
+            raise HTTPException(422, "Not enough data to train: each by-product needs at least 15 rows from at least 5 different batch_id values.")
         return {"mode": "train", "n_rows": len(df), "results": out["results"],
                 "best": {k: {kk: vv for kk, vv in v.items() if kk not in ("test_ids",)} for k, v in out["best"].items()},
                 "note": "Sandbox training only: production models were not replaced."}
@@ -345,7 +347,8 @@ def train_upload(file: UploadFile = File(...), mode: str = Form("evaluate")):
             if ok.sum() >= 2:
                 rows.append({"target": t, "byproduct": bp, "n": int(ok.sum()), **calc_metrics(y[ok], p[ok]),
                              "measured": y[ok].round(3).tolist(), "predicted": p[ok].round(3).tolist()})
-    return {"mode": "evaluate", "n_rows": len(df), "results": rows}
+    return {"mode": "evaluate", "n_rows": len(df), "results": rows,
+            "note": "Evaluated against current models. If rows come from the template/training set, metrics will look optimistic."}
 
 
 @api.get("/model/metrics")

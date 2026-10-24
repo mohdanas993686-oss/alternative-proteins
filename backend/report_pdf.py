@@ -37,7 +37,7 @@ def render(r):
             ["Date", s["sample_date"] or "-", "Storage", Paragraph(s["storage_history"] or "-", small)]]
     el += [_table([["", "", "", ""]] + meta, [28 * mm, 55 * mm, 28 * mm, 69 * mm]), Spacer(1, 8)]
     el += [Paragraph(f"<b>Overall screening status:</b> <font color='{STATUS_COL[r['overall_status']]}'>{r['overall_status']}</font> &nbsp; "
-                     f"<b>Suitability score:</b> {sc['score']}/100 &nbsp; <b>Safe usable protein:</b> {sc['safe_usable_protein_g_per_kg']} g/kg", ss["BodyText"]),
+                     f"<b>Suitability score:</b> {sc['score']}/100 &nbsp; <b>Usable protein (safety-adjusted):</b> {sc['usable_protein_g_per_kg']} g/kg", ss["BodyText"]),
            Paragraph(sc["explanation"], small), Spacer(1, 8)]
     for title, items in (("Composition profile", r["composition"]), ("Anti-nutritional factors", r["anf"])):
         rows = [["Target", "Value", "Unit", "± error", "Source", "Note"]]

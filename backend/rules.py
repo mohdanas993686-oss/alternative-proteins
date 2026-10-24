@@ -186,7 +186,7 @@ def suitability(comp, anf, overall):
     usable = protein * 10 * (1 - moisture / 100) * mult
     return {
         "score": round(base * mult, 1), "base_score": round(base, 1), "safety_multiplier": mult,
-        "safe_usable_protein_g_per_kg": round(usable, 1),
+        "usable_protein_g_per_kg": round(usable, 1),
         "components": [
             {"name": "Protein", "weight": 0.45, "score": round(ps, 1), "rule": "protein % DM / 55 x 100"},
             {"name": "Fibre (lower is better)", "weight": 0.15, "score": round(fs, 1), "rule": "100 - (fibre - 5) x 2.5"},
@@ -195,7 +195,7 @@ def suitability(comp, anf, overall):
              "rule": "100 - mean(phytate/70, tannins/15, TIA/25) x 100"},
         ],
         "explanation": ("Weighted score = 45% protein + 15% fibre + 10% oil + 30% anti-nutrient load, then multiplied by a "
-                        "safety factor (PASS 1.0, REVIEW 0.85, RETEST 0.6, FAIL 0). Safe usable protein = protein (% DM) x 10 x "
+                        "safety factor (PASS 1.0, REVIEW 0.85, RETEST 0.6, FAIL 0). Usable protein (safety-adjusted) = protein (% DM) x 10 x "
                         "(1 - moisture/100) x safety factor, in g per kg as-is. The score ranks suitability for further "
                         "evaluation only; it is not a safety or regulatory decision."),
     }

@@ -36,7 +36,11 @@ BANNED = [
     (re.compile(r"\bpathogen[- ]free\b", re.I), "pathogens not detected by this test"),
     (re.compile(r"\bcleared for (human )?food use\b", re.I), "[clearance can only come from an accredited laboratory and human reviewer]"),
     (re.compile(r"\bsafe (for|to) (human )?(consumption|eat|use)\b", re.I), "[safety cannot be certified by this tool]"),
-    (re.compile(r"\b(is|are|was|were|be) (completely |totally |fully )?safe\b", re.I), r"\1 not certified as safe by this tool"),
+    (re.compile(r"\b(considered|deemed) (completely |totally |fully |generally )?safe\b", re.I), "not certified as safe by this tool"),
+    (re.compile(r"\b(is|are|was|were|be|appears|looks|seems) (completely |totally |fully |generally )?safe\b", re.I), r"\1 not certified as safe by this tool"),
+    (re.compile(r"\b(approved|suitable|fit|cleared) for (human )?(food|consumption|use)( use)?\b", re.I), "[not certifiable by this tool: needs accredited lab + human review]"),
+    (re.compile(r"\b(salmonella|aflatoxin|mycotoxin|toxin|contaminant|allergen|microbe|bacteria|e\. ?coli|listeria)[- ]free\b", re.I), r"\1 not detected by this test"),
+    (re.compile(r"\bfree (of|from) (pathogens|salmonella|aflatoxins?|toxins|contamination|allergens|microbes)\b", re.I), r"\2 not detected by this test"),
     (re.compile(r"\babsent\b", re.I), "not detected by this test"),
 ]
 
@@ -106,7 +110,7 @@ def compare_byproducts(ids=None):
     reps = [rules.build_report(s["id"]) for s in samples]
     if ids:
         rows = [{"sample": r["sample"]["sample_code"], "byproduct": r["sample"]["byproduct_label"],
-                 "score": r["suitability"]["score"], "usable_protein_g_per_kg": r["suitability"]["safe_usable_protein_g_per_kg"],
+                 "score": r["suitability"]["score"], "usable_protein_g_per_kg": r["suitability"]["usable_protein_g_per_kg"],
                  "overall": r["overall_status"]} for r in reps]
         return {"ranking": sorted(rows, key=lambda x: -x["score"])}
     return {"ranking": compare_types(reps)}
@@ -127,7 +131,7 @@ def compare_types(reps):
                     "avg_fibre": avg(lambda r: val(r, "fibre_total")), "avg_moisture": avg(lambda r: val(r, "moisture")),
                     "avg_phytate": avg(lambda r: val(r, "phytate", "anf")), "avg_tannins": avg(lambda r: val(r, "tannins", "anf")),
                     "avg_tia": avg(lambda r: val(r, "trypsin_inhibitor", "anf")),
-                    "avg_usable_protein": avg(lambda r: r["suitability"]["safe_usable_protein_g_per_kg"]),
+                    "avg_usable_protein": avg(lambda r: r["suitability"]["usable_protein_g_per_kg"]),
                     "flagged": sum(r["overall_status"] in ("FAIL", "RETEST") for r in rs),
                     "inherent_allergens": meta["allergens"]})
     return sorted(out, key=lambda x: -x["avg_score"])
@@ -142,7 +146,7 @@ def generate_report(id):
     r = rules.build_report(_resolve(id)["id"])
     return {"sample": r["sample"]["sample_code"], "byproduct": r["sample"]["byproduct_label"],
             "overall_status": r["overall_status"], "suitability_score": r["suitability"]["score"],
-            "safe_usable_protein_g_per_kg": r["suitability"]["safe_usable_protein_g_per_kg"],
+            "usable_protein_g_per_kg": r["suitability"]["usable_protein_g_per_kg"],
             "composition": {c["key"]: {"value": c["value"], "unit": c["unit"], "source": c["source"], "error": c["error"]} for c in r["composition"]},
             "anf": {c["key"]: {"value": c["value"], "unit": c["unit"], "source": c["source"], "lab_assay_recommended": c.get("lab_assay_recommended")} for c in r["anf"]},
             "human_review_required": r["human_review_required"], "n_anomalies": len(r["anomalies"])}
@@ -177,7 +181,7 @@ def summarize(tool, res):
     if tool == "find_missing_data":
         return f"{len(res['missing'])} item(s) missing" + (": " + ", ".join(m["label"] for m in res["missing"][:4]) if res["missing"] else "")
     if tool == "generate_report":
-        return f"Suitability score {res['suitability_score']}/100 · usable protein {res['safe_usable_protein_g_per_kg']} g/kg · overall {res['overall_status']}"
+        return f"Suitability score {res['suitability_score']}/100 · usable protein {res['usable_protein_g_per_kg']} g/kg · overall {res['overall_status']}"
     if tool == "suggest_retests":
         return f"{len(res['retests'])} retest/confirmation(s) proposed"
     return "done"
@@ -226,7 +230,7 @@ async def _draft(system, prompt, provider, fallback, run_id, sample_id, step):
         try:
             async for d in llm_stream(system, prompt, provider):
                 text += d
-                yield _ev(type="text", delta=d)
+                yield _ev(type="text", text=sanitize(text))
             used_llm = True
         except Exception as e:
             yield _ev(type="notice", message=f"LLM unavailable ({type(e).__name__}); using rule-based assistant.")
@@ -249,7 +253,7 @@ def _fallback_report(results):
     pred = by.get("run_prediction", {})
     lines = [f"Summary:", f"- Sample {rep.get('sample')} ({rep.get('byproduct')}) has a suitability score of {rep.get('suitability_score')}/100 "
              f"and an overall screening status of {rep.get('overall_status')}.",
-             f"- Estimated usable protein: {rep.get('safe_usable_protein_g_per_kg')} g/kg (after safety factor).", "", "Safety flags:"]
+             f"- Estimated usable protein: {rep.get('usable_protein_g_per_kg')} g/kg (after safety factor).", "", "Safety flags:"]
     for f in safe.get("flags", []):
         if f["status"] != "PASS":
             lines.append(f"- {f['label']}: {f['status']} - {f['message']}")

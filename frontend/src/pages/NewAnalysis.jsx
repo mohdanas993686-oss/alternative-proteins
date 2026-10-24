@@ -87,7 +87,8 @@ const ScanStep = ({ form, back, onCreated }) => {
   const load = async (data) => {
     setScan(data);
     const r = await api.post("/predict", { byproduct: form.byproduct, spectrum: data.spectrum, wavelengths: data.wavelengths });
-    setPreds(r.data.predictions);
+    const order = Object.keys(TARGET_LABEL);
+    setPreds([...r.data.predictions].sort((a, b) => order.indexOf(a.target) - order.indexOf(b.target)));
   };
   const simulate = async () => { setBusy("scan"); try { await load((await api.post("/simulate-scan", { byproduct: form.byproduct })).data); } catch (e) { toast.error(errMsg(e)); } setBusy(""); };
   const upload = async (file) => {
@@ -137,7 +138,7 @@ const ReportStep = ({ sample }) => {
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-xl border p-5"><p className="eyebrow">Suitability score</p><p data-testid="wizard-score" className="font-display text-5xl font-extrabold">{r.suitability.score}<span className="text-lg text-muted-foreground">/100</span></p></div>
         <div className="rounded-xl border p-5"><p className="eyebrow mb-2">Screening status</p><StatusBadge status={r.overall_status} testid="wizard-overall-status" /><p className="mt-2 text-xs text-muted-foreground">{r.retests.length} retest / confirmation item(s)</p></div>
-        <div className="rounded-xl border p-5"><p className="eyebrow">Safe usable protein</p><p className="font-display text-3xl font-extrabold">{r.suitability.safe_usable_protein_g_per_kg}<span className="text-base text-muted-foreground"> g/kg</span></p></div>
+        <div className="rounded-xl border p-5"><p className="eyebrow">Usable protein (safety-adjusted)</p><p className="font-display text-3xl font-extrabold">{r.suitability.usable_protein_g_per_kg}<span className="text-base text-muted-foreground"> g/kg</span></p></div>
       </div>
       <div className="flex flex-wrap gap-3">
         <button data-testid="wizard-open-report" onClick={() => nav(`/samples/${sample.id}`)} className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground">Open full report <ArrowRight className="h-4 w-4" /></button>

@@ -1,0 +1,51 @@
+{
+  "summary": "First full run of ByProduct Analyser, backend and frontend. Backend: 21 of 22 pytest cases pass. The only failure is that FastAPI /docs cannot be reached through the public URL. Frontend: every requested flow works end to end. Covered: dashboard stats and banner, theme toggle, the 4-step wizard (validation, simulated scan, spectrum chart, predictions, lab form with aw>1 error, score and status), the report page (score explanation, composition and ANF tables with badges, safety flags, retests and missing data, PDF download, add-lab-results dialog, human review changing to 'Review requested'), the agent full run with Claude (6 steps, answer, AI label, human-review button), /agent chat with ChatGPT (compare_byproducts plan and answer, logs list after refresh), compare cards, radar and table, model metrics, predicted-vs-measured selects, retrain (finished in about 38s), CSV evaluate upload, threshold save and negative-value error, roadmap with 3 stages, and mobile nav. Both LLM providers returned real LLM answers (llm=true, no fallback). No banned wording was found in agent answers.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/docs", "issue": "Swagger UI is only served at backend root /docs. The public ingress sends /docs to the React app and /api/docs returns 404, so the API docs cannot be reached from the public URL. Fix: FastAPI(docs_url='/api/docs', openapi_url='/api/openapi.json', redoc_url='/api/redoc')."},
+      {"endpoint": "POST /api/train/upload (mode=train)", "issue": "Uploading the CSV from /api/train/template with mode=train returns 200 with results:[] and best:{}. This fails silently: train_dataset skips every group because the template has only 12 rows per by-product and fewer than 4 unique batch_id values (ml/train.py line 77). The endpoint should return 422 with a clear message, or the template should contain enough rows and batches to train."},
+      {"endpoint": "agent.sanitize guardrail", "issue": "Some banned phrasings pass through unchanged: 'considered safe', 'approved for food use' ('approved' is banned in GUARDRAILS but has no BANNED regex), 'Salmonella-free', 'free of pathogens', 'suitable for food use'. Streamed 'text' deltas are also shown in the UI before sanitising; only the 'final' event is sanitised, so unsanitised text is visible briefly while streaming."},
+      {"endpoint": "POST /api/train/upload (mode=evaluate)", "issue": "The template rows come from the training dataset, so evaluating the template against production models is optimistic (R2 about 0.95 or higher; it scores on training data). Say so in the UI or use held-out rows in the template."},
+      {"endpoint": "General", "issue": "There is no DELETE endpoint for samples, so test or demo data cannot be cleaned up through the API."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AgentPanel human-review-btn", "issue": "It still shows 'Human review required' and stays clickable after the sample is already pending review, so repeated clicks create duplicate escalation logs. The report-page button changes correctly to 'Review requested'; the agent panel button should use the same state.", "selector": "[data-testid='human-review-btn']", "priority": "LOW"},
+      {"component": "AgentPanel autoscroll", "issue": "endRef.scrollIntoView runs on every streamed delta and scrolls the whole page while the agent streams on the sample report page.", "selector": "[data-testid='agent-panel']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Wizard step 4 / Sample report / PDF", "issues": ["The label 'Safe usable protein' (and the field safe_usable_protein_g_per_kg) conflicts with the requirement to never imply a sample is safe. The Claude answer repeated 'safe usable protein'. Rename to 'Usable protein (safety-adjusted)' or similar."]},
+      {"screen": "Wizard step 1", "issues": ["Sampling date uses the browser's native date picker (input type=date) instead of the shadcn Calendar/Popover."]},
+      {"screen": "Wizard step 2 preview-predictions", "issues": ["Rows are in random order (Phytate first, ANF rows mixed in with composition rows). Sort composition first, then ANF, as on the report page."]},
+      {"screen": "Compare", "issues": ["The radar chart is small inside its card with a lot of empty space."]},
+      {"screen": "Mobile header", "issues": ["No brand name or logo in the mobile top bar, only the hamburger and the DEMO DATA badge."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_byproduct_api.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Serve FastAPI docs under /api/docs (docs_url, openapi_url) so they can be reached publicly",
+    "Rename 'Safe usable protein' wording across the UI, PDF and agent tool output to avoid implying safety",
+    "Extend agent.sanitize BANNED patterns ('considered/deemed safe', 'approved for ... use', '<x>-free', 'free of/from pathogens/aflatoxin') and sanitise streamed deltas, or hide the raw stream until 'final'",
+    "/api/train/upload mode=train: return a clear 422 when no group meets the minimum rows/batches, and make the template trainable",
+    "AgentPanel human-review-btn: reflect 'Review requested' state once escalated",
+    "Optional: replace the native date input with the shadcn Calendar; sort the preview predictions table"
+  ],
+  "critical_code_review_comments": [
+    "agent.py: only the final text is sanitised; 'text' SSE deltas stream raw LLM output to the UI",
+    "agent.py BANNED list does not cover 'approved', '-free' suffix forms or 'considered safe'",
+    "server.py: /docs is unreachable through the ingress; set docs_url under /api",
+    "server.py list_samples/dashboard/compare call build_report for every sample on every request (N full rule evaluations). Fine for 20 samples, but it will not scale",
+    "server.py _run_training replaces models in place while predict requests may be served at the same time. The 409 guard is good, but predictor.reload is not atomic with respect to in-flight predictions",
+    "server.py create_sample: auto code uses COUNT(*)+201, which can collide after deletions (the 409 then surfaces to the user)"
+  ],
+  "updated_files": ["/app/backend/tests/test_byproduct_api.py"],
+  "success_rate": {"backend": "95% (21/22)", "frontend": "100% of requested flows working; minor wording/design issues"},
+  "seed_data_creation": "Created test samples (TEST-xxxx, GUA-222) during testing. During cleanup I accidentally removed 4 seeded rows (a SQLite LIKE 'TEST_%' pattern matched supplier 'Test Rice Mills'). I then cleared the samples, predictions, lab_results, agent_logs and chat_messages tables and re-ran seed.seed(), which restored 20 fresh seeded demo samples. Sample IDs changed, and agent logs and chat history were cleared. Afb1 threshold was reset to 10.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "No login. Run pytest with REACT_APP_BACKEND_URL exported: pytest /app/backend/tests/test_byproduct_api.py. Each run creates one TEST- sample (there is no delete endpoint). Clean up with an exact match on sample_code LIKE 'TEST-%' and supplier='TEST_sup'. Do not use LIKE 'TEST_%' on supplier, because '_' is a wildcard. Agent runs take about 10-25s; retraining takes about 38s. Both providers (claude: claude-sonnet-5-5, chatgpt: gpt-5.6-terra) returned real LLM output via the Emergent key.",
+  "test_credentials": "None required (no auth)."
+}

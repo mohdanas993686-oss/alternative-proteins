@@ -30,8 +30,8 @@ export default function Compare() {
           </div>
           <div className="grid gap-6 lg:grid-cols-2">
             <Section testid="radar-chart-section" eyebrow="Profile" title="Radar comparison (higher = better)">
-              <Plot testid="radar-chart" height={400} data={rows.map((r) => ({ type: "scatterpolar", r: [...radarVals(r), radarVals(r)[0]], theta: [...AXES, AXES[0]], name: r.label, fill: "toself", opacity: 0.55, line: { color: BP[r.byproduct].color } }))}
-                layout={{ polar: { radialaxis: { range: [0, 100], tickfont: { size: 9 } } }, margin: { l: 40, r: 40, t: 30, b: 30 } }} />
+              <Plot testid="radar-chart" height={460} data={rows.map((r) => ({ type: "scatterpolar", r: [...radarVals(r), radarVals(r)[0]], theta: [...AXES, AXES[0]], name: r.label, fill: "toself", opacity: 0.55, line: { color: BP[r.byproduct].color } }))}
+                layout={{ polar: { domain: { x: [0, 1], y: [0.12, 1] }, radialaxis: { range: [0, 100], tickfont: { size: 9 } } }, margin: { l: 30, r: 30, t: 20, b: 10 }, legend: { orientation: "h", y: 0 } }} />
             </Section>
             <Section testid="composition-compare-section" eyebrow="Composition" title="Average composition (% DM)">
               <Plot testid="composition-compare-chart" height={400} data={[["avg_protein", "Protein", "#15803d"], ["avg_fibre", "Fibre", "#a16207"], ["avg_oil", "Oil", "#d97706"], ["avg_moisture", "Moisture", "#0369a1"]].map(([k, n, c]) => ({ type: "bar", name: n, x: rows.map((r) => r.label), y: rows.map((r) => r[k]), marker: { color: c } }))}
