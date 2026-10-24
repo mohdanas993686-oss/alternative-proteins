@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, Scale, Loader2, AlertTriangle } from "lucide-react";
-import { api, errMsg, fmt } from "@/lib/api";
+import { api, errMsg, fmt, BP } from "@/lib/api";
 import { PageHeader, Section, CardSkeleton, StatusBadge, Note, Term, Empty } from "@/components/common";
 import { Plot } from "@/components/Charts";
 
@@ -57,7 +57,7 @@ export default function Blender() {
     api.get("/blend/sources").then((r) => {
       setSources(r.data);
       setComps([{ source_id: "type:guar_meal", percent: 60 }, { source_id: "type:pulse_residue", percent: 40 }]);
-    });
+    }).catch((e) => { setSources([]); setErr(errMsg(e)); });
   }, []);
 
   const total = comps.reduce((s, c) => s + (Number(c.percent) || 0), 0);
@@ -65,7 +65,7 @@ export default function Blender() {
   const valid = comps.length >= 2 && Math.abs(total - 100) <= 0.5 && comps.every((c) => c.percent > 0);
 
   useEffect(() => {
-    if (!sources) return;
+    if (!sources?.length) return;
     if (!valid) { setErr(comps.some((c) => !(c.percent > 0)) ? "Every component needs more than 0%." : `Percentages add up to ${fmt(total, 1)}%: they must total 100%.`); return; }
     setErr(""); setBusy(true);
     const t = setTimeout(() => api.post("/blend", { components: comps }).then((r) => setRes(r.data)).catch((e) => setErr(errMsg(e))).finally(() => setBusy(false)), 300);
@@ -80,9 +80,9 @@ export default function Blender() {
   return (
     <div>
       <PageHeader eyebrow="Formulation" title="Blender" desc="Mix 2 to 5 by-products (type averages or individual samples) and see the theoretical blended protein, fibre, oil and anti-nutrient profile." />
-      {!sources ? <CardSkeleton rows={5} /> : sources.length === 0 ? <Empty title="No samples to blend" hint="Add samples first via New analysis." /> : (
-        <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
-          <div className="space-y-4 xl:sticky xl:top-36 xl:self-start">
+      {!sources ? <CardSkeleton rows={5} /> : sources.length === 0 ? <Empty testid="blend-empty" title={err ? "Could not load blend sources" : "No samples to blend"} hint={err || "Add samples first via New analysis."} /> : (
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[420px_1fr]">
+          <div className="min-w-0 space-y-4 xl:sticky xl:top-36 xl:self-start">
             <Section testid="blend-components-section" eyebrow="Recipe" title="Components" right={<span data-testid="blend-total" className={`rounded-full px-3 py-1 font-mono text-sm font-bold ${Math.abs(total - 100) <= 0.5 ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : "bg-rose-500/15 text-rose-800 dark:text-rose-300"}`}>{fmt(total, 1)}%</span>}>
               <div className="space-y-3">
                 {comps.map((c, i) => <ComponentRow key={i} c={c} i={i} sources={sources} used={used} onChange={(p) => update(i, p)} onRemove={() => setComps((cs) => cs.filter((_, j) => j !== i))} canRemove={comps.length > 2} />)}
@@ -97,7 +97,7 @@ export default function Blender() {
             <Note tone="warn" testid="blend-disclaimer">Theoretical blend calculated from DEMO DATA. It is not a tested formulation and is not certified safe.</Note>
           </div>
 
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             {!res ? <CardSkeleton rows={4} /> : (
               <div className={`space-y-6 transition-opacity duration-300 ${busy || err ? "opacity-60" : ""}`}>
                 <Section testid="blend-result-section" eyebrow="Result" title="Blended profile" right={busy && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}>
@@ -111,11 +111,11 @@ export default function Blender() {
                       y: SHARE_KEYS.filter(([k]) => res.contribution_shares[k]).map(([, l]) => l),
                       x: SHARE_KEYS.filter(([k]) => res.contribution_shares[k]).map(([k]) => res.contribution_shares[k][i]),
                       hovertemplate: "%{y}: %{x:.1f}%<extra>" + c.label + "</extra>",
-                    }))} layout={{ barmode: "stack", xaxis: { title: { text: "Share of blend total (%)" }, range: [0, 100] }, margin: { l: 110, r: 10, t: 10, b: 50 }, legend: { orientation: "h", y: -0.3 } }} />
+                    }))} layout={{ barmode: "stack", yaxis: { autorange: "reversed" }, xaxis: { title: { text: "Share of blend total (%)" }, range: [0, 100] }, margin: { l: 110, r: 10, t: 10, b: 50 }, legend: { orientation: "h", y: -0.3 } }} />
                   </Section>
                   <Section testid="blend-score-compare-section" eyebrow="Benchmark" title="Blend vs components (score)">
                     <Plot testid="blend-score-chart" height={320} data={[{
-                      type: "bar", x: [...res.components.map((c) => c.label.replace(" (average)", " avg")), "Blend"], y: [...res.components.map((c) => c.score), res.suitability.score],
+                      type: "bar", x: [...res.components.map((c) => (c.kind === "sample" ? c.label.split(" · ")[0] : `${BP[c.byproduct]?.label} avg`)), "Blend"], y: [...res.components.map((c) => c.score), res.suitability.score],
                       marker: { color: [...res.components.map((_, i) => PALETTE[i]), "#1f4d36"], line: { width: [...res.components.map(() => 0), 2], color: "#e7b416" } },
                       text: [...res.components.map((c) => c.status), res.status], textposition: "outside", hovertemplate: "%{x}: %{y:.1f}<extra></extra>",
                     }]} layout={{ yaxis: { title: { text: "Suitability score" }, range: [0, 100] }, showlegend: false, margin: { l: 52, r: 10, t: 10, b: 90 } }} />

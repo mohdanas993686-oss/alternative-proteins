@@ -28,6 +28,8 @@ def sources():
                     "n_samples": len(rs), "values": vals, "status": None, "allergens": list(meta["allergens"])})
     for r in reps:
         s = r["sample"]
+        if not {"protein", "moisture"} <= set(_values(r)):
+            continue
         detected = [rules.ALLERGENS[l["target"]] for l in r["lab_results"] if l["target"] in rules.ALLERGENS and l["result"] == "detected"]
         out.append({"id": f"sample:{s['id']}", "kind": "sample", "byproduct": s["byproduct"],
                     "label": f"{s['sample_code']} · {s['byproduct_label']}", "values": _values(r),
@@ -57,11 +59,11 @@ def blend(components):
     for k in KEYS:
         if k == "moisture":
             continue
-        have = [(s, d) for (s, _), d in zip(parts, dm) if k in s["values"] or k in ZERO_IF_MISSING]
-        if not have:
+        have = [k in s["values"] or k in ZERO_IF_MISSING for s, _ in parts]
+        if not any(have):
             continue
-        tot_dm = sum(d for _, d in have)
-        contrib = [d * s["values"].get(k, 0) for s, d in have]
+        contrib = [d * s["values"].get(k, 0) if h else 0 for (s, _), d, h in zip(parts, dm, have)]
+        tot_dm = sum(d for d, h in zip(dm, have) if h)
         vals[k] = round(sum(contrib) / tot_dm, 3) if tot_dm else None
         total = sum(contrib)
         shares[k] = [round(100 * x / total, 1) if total else 0 for x in contrib]

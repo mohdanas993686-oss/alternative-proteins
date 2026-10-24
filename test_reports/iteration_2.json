@@ -1,0 +1,41 @@
+{
+  "summary": "Tested the new Blender feature (backend and frontend) plus a nav and Compare-link regression check. Backend: 17/17 new pytest cases pass. Covered: /api/blend/sources structure and type averages; DM-weighted blend math checked against hand calculation; mass-weighted moisture; gum treated as 0 when missing; worst-status inheritance (5% FAIL lot gives FAIL, score 0); PASS+PASS blend; 5-component allergen union; 0.5% tolerance; 422 validation for sum, duplicates, 0%, unknown id, >100 or negative, more than 5 or fewer than 2 components, empty body. Frontend: defaults (guar 60 / pulse 40) render the score, usable protein, status, allergens, table, contribution and score charts. Also checked: the sum error message, Scale to 100%, Add component (0% gives an error), Equal split (33.4/33.3/33.3), disabling of already-used options, switching to a FAIL sample (status FAIL, score 0), the slider syncing with the number input, remove (disabled at 2 components), Add disabled at 5, the Compare 'Try mixing in the Blender' link, and sidebar nav. No page errors. Found 1 real data bug (samples with no values) and 1 mobile layout overflow.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/blend (blend.py blend())", "issue": "A sample with no predictions or lab values (e.g. created via POST /api/samples without a spectrum) appears in /api/blend/sources with values={} and is accepted in a blend. Reproduced with TEST sample 50% + type:guar_meal 50%. Result: the blend reports protein 48.73, which is pure guar (the empty component is silently dropped from DM-weighted keys). Moisture is halved (missing moisture is treated as 0). contribution_shares arrays have length 1 instead of 2, so the frontend (which indexes shares by component position) credits 100% of protein/oil/etc. to component 0, the empty sample. Fix: exclude sources with no composition values from sources(), or return 422 when a component lacks protein/moisture. Also always emit shares aligned to the components list (0 for missing)."},
+      {"endpoint": "GET /api/blend/sources and POST /api/blend", "issue": "Performance: every call runs rules.build_report for all samples. POST /api/blend calls sources() again, and the UI posts on every slider change (300ms debounce). Fine for about 20 samples but O(N) per keystroke."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Blender page mobile layout", "issue": "At 390px the page scrolls horizontally (document scrollWidth 618px). The outer grid (`grid gap-6 xl:grid-cols-[420px_1fr]`) has no explicit columns below xl, and the grid items keep min-width:auto, so the table's min-w-[560px] and the Plotly charts widen the column. Cards and recipe controls are cut off on the right, and charts overflow their sections. Fix: add `grid-cols-1` to the grid, or `min-w-0` to both column divs (the table already sits in overflow-x-auto).", "selector": "[data-testid='blend-table-section']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Blender score chart", "issues": ["X-axis labels are long and rotated, and get truncated ('Pulse-processing residue a...'). With 5 components the labels crowd together; use short names or the component colour legend."]},
+      {"screen": "Blender sources fetch", "issues": ["api.get('/blend/sources') has no .catch, so a backend error leaves the skeleton spinning forever with no error message."]},
+      {"screen": "Blender recipe", "issues": ["The sliders are independent: moving one does not rebalance the others, so the total often jumps to e.g. 146.6% and needs 'Scale to 100%'. This is acceptable, but the last valid result stays on screen (only dimmed) while the error shows."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_blender_api.py", "/app/test_reports/pytest/pytest_blender.xml"],
+  "action_items": [
+    "blend.py: exclude sources with no composition values (or 422 when a component lacks protein/moisture), and keep contribution_shares aligned to the component order (0 for missing)",
+    "Blender.jsx: fix mobile horizontal overflow by adding grid-cols-1 or min-w-0 on the grid columns",
+    "Blender.jsx: add a .catch on the /blend/sources fetch with an error state",
+    "Optional: shorten the score-chart x labels; cache sources per request in blend()"
+  ],
+  "critical_code_review_comments": [
+    "blend.py blend(): `have` filtering drops components missing a key, but shares are indexed by position in `have`, not by component. This misaligns with the frontend's res.contribution_shares[k][i]",
+    "blend.py: moisture uses s['values'].get('moisture', 0), so a missing moisture is silently treated as 0% (and DM weight becomes 100%)",
+    "Blender.jsx ComponentRow uses key={i}, which is fine because the rows are controlled, but a stable id would be cleaner",
+    "Average-type sources are computed from build_report values, which mix lab-measured and predicted values. This is acceptable for a demo but undocumented"
+  ],
+  "updated_files": ["/app/backend/tests/test_blender_api.py"],
+  "success_rate": {"backend": "100% (17/17); 1 data-edge bug found via manual repro", "frontend": "about 90%: all desktop flows work; mobile overflow"},
+  "seed_data_creation": "Created TEST-BLND1 (supplier TEST_sup) to reproduce the empty-sample bug, then deleted it directly from SQLite (SQLITE_PATH from backend/.env). No seeded data was modified.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: export REACT_APP_BACKEND_URL=... && pytest /app/backend/tests/test_blender_api.py. The tests create no data. To reproduce the empty-sample bug: POST /api/samples without a spectrum, then blend it 50/50 with type:guar_meal. Clean up via db.py with SQLITE_PATH exported (sample_code LIKE 'TEST-%' AND supplier='TEST_sup').",
+  "test_credentials": "None required (no auth)."
+}

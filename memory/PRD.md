@@ -15,6 +15,8 @@ Working prototype web app "ByProduct Analyser": AI platform analysing protein-ri
 - Everything in the spec above, working end to end; tested with the testing agent (iteration_1: backend 21/22, frontend 100%)
 - Fixes after test: /api/docs path, the "usable protein (safety-adjusted)" rename, a wider guardrail sanitizer that also cleans streamed text, trainable CSV template and a 422 error for too little data, the agent's review button showing its pending state, panel-only autoscroll, sorted preview table, a bigger radar chart
 
+- 2026-06 Formulation Blender (/blender, blend.py, GET /api/blend/sources, POST /api/blend): mix 2-5 by-product averages or individual samples. Values are weighted by dry matter and moisture by mass. The blend takes the worst component status (a contaminated lot is never diluted to pass, and type averages count as REVIEW), lists the combined allergens, and shows score, usable protein, nutrient contribution and benchmark charts. Tested (iteration_2: backend 17/17), with the empty-sample, mobile overflow and error-state fixes applied.
+
 ## Backlog
 - P1: Human reviewer workflow (sign-off, reviewer notes, clear review status)
 - P1: Sample edit/delete (with an audit trail), lab-result history view
