@@ -1,0 +1,153 @@
+{
+  "project_name": "ByProduct Analyser",
+  "app_type": "dashboard / saas_app",
+  "archetype": "ARCHETYPE 1: ORGANIC & EARTHY (Agri-Tech & Tactical Precision)",
+  "theme_strategy": {
+    "default": "light",
+    "has_toggle": true,
+    "description": "Calm agri-tech aesthetic using organic sage/emerald greens, rich earth ochres, stone slate, and warm bone surfaces. Supports smooth dark/light mode switching."
+  },
+  "typography": {
+    "font_family_heading": "'Cabinet Grotesk', 'Outfit', sans-serif",
+    "font_family_body": "'Inter', 'DM Sans', sans-serif",
+    "font_family_mono": "'JetBrains Mono', 'Fira Code', monospace",
+    "hierarchy": {
+      "h1": "text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight",
+      "h2": "text-2xl sm:text-3xl font-bold tracking-tight",
+      "h3": "text-lg sm:text-xl font-semibold tracking-snug",
+      "h4": "text-base font-semibold",
+      "body": "text-sm sm:text-base leading-relaxed text-muted-foreground",
+      "caption": "text-xs font-mono tracking-wider uppercase"
+    }
+  },
+  "colors": {
+    "light_mode": {
+      "background": "hsl(40 20% 98%)",
+      "surface_card": "hsl(0 0% 100%)",
+      "border": "hsl(140 15% 88%)",
+      "primary": "hsl(148 45% 22%)",
+      "primary_hover": "hsl(148 45% 17%)",
+      "primary_foreground": "hsl(0 0% 100%)",
+      "secondary": "hsl(40 25% 93%)",
+      "accent_amber": "hsl(35 85% 45%)",
+      "accent_emerald": "hsl(150 60% 32%)",
+      "accent_terracotta": "hsl(15 65% 48%)",
+      "status_pass": "#15803d",
+      "status_review": "#d97706",
+      "status_retest": "#c2410c",
+      "status_fail": "#dc2626"
+    },
+    "dark_mode": {
+      "background": "hsl(150 15% 6%)",
+      "surface_card": "hsl(150 12% 9%)",
+      "border": "hsl(150 10% 18%)",
+      "primary": "hsl(145 50% 42%)",
+      "primary_hover": "hsl(145 50% 50%)",
+      "primary_foreground": "hsl(150 20% 5%)",
+      "secondary": "hsl(150 10% 14%)",
+      "status_pass": "#22c55e",
+      "status_review": "#f59e0b",
+      "status_retest": "#ea580c",
+      "status_fail": "#ef4444"
+    }
+  },
+  "safety_disclaimer_system": {
+    "demo_data_label": "DEMO DATA ONLY - FOR SIMULATION",
+    "permanent_safety_banner": {
+      "text": "CRITICAL FOOD SAFETY NOTICE: This tool provides predictive screening models based on NIR spectroscopy and synthetic algorithms. It does NOT certify food safety or compliance. Full lab assays & human expert verification are mandatory before human-food consumption.",
+      "style": "bg-amber-500/10 border-l-4 border-amber-500 text-amber-900 dark:text-amber-200 text-xs sm:text-sm p-3 rounded-r-md flex items-center gap-3 shadow-sm font-medium"
+    },
+    "agent_notice_label": "AI-generated, verify before use",
+    "human_review_button_text": "Human Review Required"
+  },
+  "modules": [
+    {
+      "name": "Dashboard",
+      "description": "High-density summary overview with stats cards (Total Samples Analysed, Avg Protein Content %, Safety Pass Rate, Retest Queue), recent samples table, quick filter tabs, and prominent 'New Analysis CTA'.",
+      "layout": "Bento Grid Mode B (High Density)"
+    },
+    {
+      "name": "New Analysis 4-Step Wizard",
+      "description": "Interactive step-by-step submission with progress stepper: Step 1: By-Product Selection & Metadata -> Step 2: NIR Spectrum Data Input (File upload/Synthetic Generator) -> Step 3: Processing & AI Feature Extraction -> Step 4: Summary & Run Analysis.",
+      "layout": "Step Wizard with smooth transition cards and loading skeletons"
+    },
+    {
+      "name": "Composition Analyser",
+      "description": "Interactive NIR Spectrum plot (900-1700nm wavelength vs absorbance) using Plotly, predicted values table with error estimates (e.g., Protein 48.2% ± 0.6%), and clear badges distinguishing AI Prediction vs Lab Measured.",
+      "charts": ["Plotly NIR Spectrum Chart with peak annotations and interactive range slider"]
+    },
+    {
+      "name": "Anti-Nutritional Factors (ANFs)",
+      "description": "Detailed breakdown of Phytate, Tannins, Trypsin Inhibitor, Lectins, and Saponins with safety threshold gauges, risk level indicators, and mandatory 'Lab assay recommended' contextual note cards.",
+      "layout": "Grid of parameter cards with radial gauge meters and threshold reference lines"
+    },
+    {
+      "name": "Food-Safety Screening",
+      "description": "Rule-engine safety check for Aflatoxin, Microbial counts, Heavy metal/pathogens, and Allergens. Displays status badges (PASS, REVIEW, RETEST, FAIL) with rule rationale, tolerance limits, and the permanent safety notice banner."
+    },
+    {
+      "name": "Final Sample Report & PDF Export",
+      "description": "Comprehensive printable sample report featuring overall Suitability Score (0-100), spider/radar radar summary, breakdown of protein quality, safety decision, and instant PDF download export function."
+    },
+    {
+      "name": "Comparison View",
+      "description": "Side-by-side radar chart and metric comparison matrix for 5 key protein by-products (Guar Meal, Groundnut Cake, Almond Cake, Rice Bran, Pulse Residues) ranking suitability for human food formulations."
+    },
+    {
+      "name": "Model Performance Page",
+      "description": "ML Evaluation view featuring predicted vs measured scatter plots, error metrics tables (RMSE, R², MAE), model version comparison charts, dataset CSV uploader, and an interactive 'Retrain Model' trigger with live progress bar simulation."
+    },
+    {
+      "name": "Analysis Agent Chat + Activity Timeline",
+      "description": "Collapsible AI chat assistant with live 'Agent Activity' execution timeline (simulating tool calls: fetch_nir_spectrum, calculate_anf_ratio, check_aflatoxin_rule, compile_report), badge 'AI-generated, verify before use', and 'Human review required' action."
+    },
+    {
+      "name": "Roadmap & Terminology Tooltips",
+      "description": "Feature roadmap timeline and hoverable tooltips across all technical terms (NIR, Phytate, Trypsin Inhibitors, Aflatoxin B1, NIRS 1700nm)."
+    }
+  ],
+  "visual_enhancers": {
+    "cards": "Rounded-xl or rounded-2xl cards with 1px soft border, subtle elevation shadow-sm, and hover lift effect (-translate-y-0.5)",
+    "badges": {
+      "PASS": "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1 font-semibold text-xs px-2.5 py-0.5 rounded-full",
+      "REVIEW": "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 flex items-center gap-1 font-semibold text-xs px-2.5 py-0.5 rounded-full",
+      "RETEST": "bg-orange-500/15 text-orange-700 dark:text-orange-300 border border-orange-500/30 flex items-center gap-1 font-semibold text-xs px-2.5 py-0.5 rounded-full",
+      "FAIL": "bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30 flex items-center gap-1 font-semibold text-xs px-2.5 py-0.5 rounded-full",
+      "DEMO_DATA": "bg-stone-200 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-300 dark:border-stone-700 font-mono text-[10px] tracking-widest uppercase px-2 py-0.5 rounded"
+    },
+    "plotly_charts": {
+      "theme_awareness": "Dynamically switch Plotly template and background color (transparent) to match dark/light theme CSS variables",
+      "line_colors": ["#15803d", "#d97706", "#2563eb", "#059669", "#7c3aed"]
+    }
+  },
+  "image_urls": [
+    {
+      "category": "Grains and protein by-products in petri dish lab setup",
+      "url": "https://images.pexels.com/photos/30580656/pexels-photo-30580656.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "usage": "Hero banner / Dashboard background accent"
+    },
+    {
+      "category": "Scientist in agri-lab",
+      "url": "https://images.pexels.com/photos/3912947/pexels-photo-3912947.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "usage": "About / New Analysis sample source placeholder"
+    },
+    {
+      "category": "Wheat grain crop harvest",
+      "url": "https://images.unsplash.com/photo-1483871788521-4f224a86e166?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "usage": "Raw material residue header"
+    }
+  ],
+  "testing_and_accessibility": {
+    "data_testid_rule": "ALL interactive buttons, inputs, filter tabs, modal triggers, chat inputs, download buttons, theme toggle, and status badges MUST include data-testid (e.g. data-testid='new-analysis-btn', data-testid='sample-status-badge')",
+    "contrast_check": "Ensure text has 4.5:1 contrast against background cards; hover states explicitly define text-color.",
+    "keyboard_nav": "Full focus-ring support on tabs, buttons, inputs using ring-2 ring-emerald-600 ring-offset-2."
+  },
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "Always label synthetic data with DEMO DATA tag across UI cards and tables.",
+    "Ensure permanent food safety disclaimer banner is anchored or prominently present on analysis views.",
+    "Provide dark/light theme toggle in header bar.",
+    "Use Plotly for NIR Spectrum chart (900-1700nm) and model evaluation scatter plots.",
+    "Include live tool execution timeline inside the AI Chat agent panel.",
+    "All interactive elements MUST have data-testid attributes."
+  ]
+}

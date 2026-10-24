@@ -1,0 +1,87 @@
+@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@500,700,800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 40 20% 97%;
+        --foreground: 150 25% 10%;
+        --card: 0 0% 100%;
+        --card-foreground: 150 25% 10%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 150 25% 10%;
+        --primary: 148 45% 22%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 40 25% 92%;
+        --secondary-foreground: 150 25% 14%;
+        --muted: 40 20% 94%;
+        --muted-foreground: 150 8% 36%;
+        --accent: 145 30% 92%;
+        --accent-foreground: 148 45% 18%;
+        --destructive: 0 72% 46%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 140 15% 87%;
+        --input: 140 15% 84%;
+        --ring: 148 45% 30%;
+        --earth: 30 45% 38%;
+        --radius: 0.9rem;
+    }
+    .dark {
+        --background: 150 15% 6%;
+        --foreground: 40 20% 94%;
+        --card: 150 12% 9%;
+        --card-foreground: 40 20% 94%;
+        --popover: 150 12% 10%;
+        --popover-foreground: 40 20% 94%;
+        --primary: 145 50% 45%;
+        --primary-foreground: 150 20% 5%;
+        --secondary: 150 10% 14%;
+        --secondary-foreground: 40 20% 92%;
+        --muted: 150 10% 13%;
+        --muted-foreground: 40 8% 66%;
+        --accent: 150 15% 16%;
+        --accent-foreground: 145 50% 70%;
+        --destructive: 0 62% 50%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 150 10% 18%;
+        --input: 150 10% 22%;
+        --ring: 145 50% 45%;
+        --earth: 32 50% 60%;
+    }
+}
+
+@layer base {
+    * { @apply border-border; }
+    html { scroll-behavior: smooth; }
+    body {
+        @apply bg-background text-foreground;
+        font-family: 'Public Sans', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        transition: background-color .3s ease, color .3s ease;
+    }
+    h1, h2, h3, h4, .font-display { font-family: 'Cabinet Grotesk', 'Public Sans', sans-serif; letter-spacing: -0.01em; }
+    .font-mono, code { font-family: 'JetBrains Mono', monospace; }
+    ::selection { background: hsl(var(--primary) / .25); }
+    :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+}
+
+@layer components {
+    .card-surface { @apply rounded-2xl border bg-card shadow-sm; transition: transform .25s ease, box-shadow .25s ease; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 30px -14px hsl(var(--primary) / .35); }
+    .eyebrow { @apply font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground; }
+    .field { @apply h-10 w-full rounded-lg border border-input bg-background px-3 text-sm; transition: border-color .2s ease, box-shadow .2s ease; }
+    .field:focus { outline: none; border-color: hsl(var(--ring)); box-shadow: 0 0 0 3px hsl(var(--ring) / .18); }
+    .field-error { border-color: hsl(var(--destructive)) !important; }
+    .grain { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E"); }
+}
+
+.fade-up { animation: fadeUp .5s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.pulse-dot { animation: pulseDot 1.2s ease-in-out infinite; }
+@keyframes pulseDot { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .fade-up, .pulse-dot { animation: none; } }
+
+[data-debug-wrapper="true"] { display: contents !important; }
