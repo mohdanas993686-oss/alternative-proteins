@@ -94,7 +94,7 @@ export default function Workspace({ ctx, problem = "all", scenario = "auto", foc
       </div>
       <StackBuilder est={est} fixes={fixes} stack={stack || []} setStack={setStack} problemFilter={problem} {...share} focused={F("stack")} />
 
-      <SectionTitle n="02" title="Outcome" hint="projected, not measured" />
+      <SectionTitle n="02" title="Outcome" hint={est.auto_scenario === "rejected" ? "as measured: no fix applies" : "projected, not measured"} />
       <div className="grid gap-6 xl:grid-cols-2">
         <BeforeAfter est={est} focused={F("before_after")} />
         <div className="space-y-6"><Gauges est={est} focused={F("gauges")} /><Timeline est={est} hl={hl} focused={F("timeline")} /></div>

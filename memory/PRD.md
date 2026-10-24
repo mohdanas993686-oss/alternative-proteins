@@ -17,7 +17,17 @@ Working prototype web app "ByProduct Analyser": AI platform analysing protein-ri
 
 - 2026-06 Formulation Blender (/blender, blend.py, GET /api/blend/sources, POST /api/blend): mix 2-5 by-product averages or individual samples. Values are weighted by dry matter and moisture by mass. The blend takes the worst component status (a contaminated lot is never diluted to pass, and type averages count as REVIEW), lists the combined allergens, and shows score, usable protein, nutrient contribution and benchmark charts. Tested (iteration_2: backend 17/17), with the empty-sample, mobile overflow and error-state fixes applied.
 
+- 2026-06 Add-on 2: Fixes & Cost Comparison (all prices are placeholder INR you can edit; the currency switcher offers ₹, $ and €)
+  - Backend: fixes.py (fix catalogue, problems, conventional sources, assumptions), costs.py (estimate, scenarios, tornado, Monte Carlo, batch curve, break-even, comparison), hub_pdf.py, and the routes /api/fixes, /api/cost/*, /api/conventional (CRUD, CSV template and import), /api/comparison, /api/hub/pdf and /api/prices/live (a stub)
+  - Frontend: /hub Cost & Fix Hub (in the menu). It holds the fix finder diagram, heatmap, bubble and radar charts, a stack builder, before/after bars, gauges, timeline, mass and protein Sankeys, what-if sliders with saved scenarios, scenario donuts, waterfall, sunburst, tornado, Monte Carlo, batch curve, break-even and the full comparison. Also new: /story (7-step story mode), /cost-comparison (editor for reference prices, plus CSV import) and a "Fixes & cost" button on the sample report
+  - Sample and hub PDFs now draw the same key charts: fix finder diagram, fix trade-off and multi-criteria radars, before/after bars, mass Sankey, waterfall, scenario donuts and comparison range bars, plus a verdict for the selected by-product
+  - Safety-blocked batches show "divert or reject, human review required" everywhere: the other scenarios show N/A, there are no recommended fixes and no product cost is shown
+  - Tested: iteration_3 and iteration_4 (backend 32/32, all frontend retest items passed)
+  - Not built (the user chose to skip it): agent tools get_fix_options, estimate_cost and compare_cost
+
 ## Backlog
+- P1: Agent cost/fix tools (get_fix_options, estimate_cost, compare_cost) — user deferred
+- P1: Fix-catalogue editor UI (the backend CRUD for /api/fixes already exists)
 - P1: Human reviewer workflow (sign-off, reviewer notes, clear review status)
 - P1: Sample edit/delete (with an audit trail), lab-result history view
 - P2: Shadcn calendar date picker; caching for list/compare endpoints at scale

@@ -4,7 +4,8 @@ import os
 import uuid
 import pytest
 import requests
-import fitz  # pymupdf
+
+fitz = pytest.importorskip("fitz")
 
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL").rstrip("/")
 API = f"{BASE_URL}/api"
@@ -198,3 +199,50 @@ def test_rejected_pdf_kpis_do_not_claim_product(s, ids):
     text, _ = pdf_text(s.get(f"{API}/report/{ids['DEMO-AFLA-01']}/pdf").content)
     seg = text[text.find("Fixes and cost"):text.find("Fix finder")]
     assert "980 kg of 1,000 kg" not in seg and "Mass yield after fixes" not in seg, seg
+
+
+# --- iteration 4 retest: safety-block fixes
+def test_afla_recommended_empty(s, ids):
+    d = s.post(f"{API}/cost/estimate", json={"sample_id": ids["DEMO-AFLA-01"]}).json()
+    assert d["safety_block"] is True and d.get("recommended") == [], d.get("recommended")
+    f = s.post(f"{API}/cost/estimate", json={"sample_id": ids["DEMO-FIX-01"]}).json()
+    assert f["recommended"], "DEMO-FIX-01 should still have recommended fixes"
+
+
+def test_afla_pdf_rejected_kpis(s, ids):
+    for url, params in ((f"{API}/report/{ids['DEMO-AFLA-01']}/pdf", None), (f"{API}/hub/pdf", {"sample_id": ids["DEMO-AFLA-01"]})):
+        r = s.get(url, params=params)
+        assert r.status_code == 200
+        text, _ = pdf_text(r.content)
+        flat = " ".join(text.split())
+        assert "Rejected or diverted (human review required)" in flat, url
+        assert "Mass yield after fixes" not in flat, url
+        assert "Not applicable: safety failure" in flat, url
+        assert "Product for food use None" in flat, url
+
+
+def test_fix_pdf_unchanged(s, ids):
+    text, _ = pdf_text(s.get(f"{API}/report/{ids['DEMO-FIX-01']}/pdf").content)
+    flat = " ".join(text.split())
+    assert "Not applicable: safety failure" not in flat
+    assert "Mass yield after fixes" in flat
+
+
+def test_hub_pdf_yield_changes_output(s, ids):
+    sid = ids["DEMO-FIX-01"]
+    a = pdf_text(s.get(f"{API}/hub/pdf", params={"sample_id": sid}).content)[0]
+    b = pdf_text(s.get(f"{API}/hub/pdf", params={"sample_id": sid, "yield_pct": 60}).content)[0]
+    assert a != b
+
+
+def test_import_keeps_placeholder(s):
+    csv = "name,key,currency,price_low,price_typical,price_high,protein_pct,digestibility,price_source\nTEST_ph_src,testph1,INR,10,12,15,40,0.8,PLACEHOLDER demo\nTEST_real_src,testreal1,INR,10,12,15,40,0.8,Market quote\n"
+    r = s.post(f"{API}/conventional/import", files={"file": ("x.csv", csv, "text/csv")})
+    assert r.status_code == 200 and r.json()["imported"] == 2
+    rows = {x["key"]: x for x in s.get(f"{API}/conventional").json()["sources"] if x["key"] in ("testph1", "testreal1")}
+    try:
+        assert rows["testph1"]["placeholder"] == 1
+        assert rows["testreal1"]["placeholder"] == 0
+    finally:
+        for x in rows.values():
+            s.delete(f"{API}/conventional/{x['id']}")

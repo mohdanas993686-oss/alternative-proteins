@@ -1,0 +1,38 @@
+{
+  "summary": "Focused retest of the iteration_3 fixes plus a light regression check. Backend pytest passes 32/32: the 27 existing tests plus 5 new ones covering an empty recommended list for the safety-blocked sample, the rejected KPI and scenario rows in the sample and hub PDFs for DEMO-AFLA-01, an unchanged DEMO-FIX-01 PDF, yield_pct changing the hub PDF, and the CSV import keeping placeholder=1. Frontend checks with Playwright: all 9 retest items pass. 1) DEMO-AFLA-01: the pass and fixes scenario cards are non-clickable DIVs showing N/A; the before/after card has the 'Measured vs limits' eyebrow and the 'no fix applied: divert or reject, human review required' headline; gauges say 'As-is reference only'; what-if says 'Safety failure: costs below are reference only'; Recommended adds nothing (stack still 2 base steps). 3) The batch slider steps through the round values 1000, 1500, 2000, 2500 with the arrow keys, and drag sets 250 without snapping back; raw, yield and failure sliders follow input; reset restores 1000 kg, Rs 46, 84% and 15%. 4) At 390px, scrollWidth is 390 on /hub (both samples) and /cost-comparison. 5) Verdict: DEMO-FIX-01 and rice bran show 'Verdict · selected by-product' with the right by-product; guar meal shows 'Verdict · lowest-cost by-product'; story step 7 shows Groundnut cake for DEMO-FIX-01 and DEMO-AFLA-01. 6) The hub PDF href includes yield_pct=87 after the yield slider moves, and drops it after reset. 7) Changing the context removes scenario=pass and the select goes back to auto. 8) The Fix Finder headline says 'safety flags need human review' for DEMO-FIX-01 and 'safety failures end in divert or reject' for DEMO-AFLA-01. Regression: open-hub-btn goes to /hub?sample=..., export-pdf-btn downloads report_DEMO-FIX-01.pdf, and all 10 nav links load.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/report/{sid}/pdf and /api/hub/pdf (hub_pdf.py ~line 355-367)", "issue": "The PDF comparison verdict and range bars always use the lowest-cost by-product (Guar meal) as the reference, even for groundnut-cake samples. The UI now uses the selected by-product. The PDF verdict reads 'Verdict: Guar meal ...' with no 'lowest-cost' label, so it does not match the on-screen verdict ('Groundnut cake ...'). The request asked for the same charts as on screen."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/hub DEMO-AFLA-01 (safety-blocked)", "issues": [
+        "Fix stack builder headline still says 'as-is cost Rs 85.7/kg product' for a batch that yields no food product",
+        "Before/after legend still reads 'after, within limit / after, outside limit' even though no fix is applied (before and after are the same)",
+        "Section heading 'Outcome · projected, not measured' does not fit a rejected batch (minor)"
+      ]},
+      {"screen": "/hub Status timeline chart", "issues": ["The x-axis title 'Hours from start' overlaps the legend ('Human review') at the bottom of the chart"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_cost_hub_api.py", "/app/test_reports/pytest/pytest_results_iter4.xml"],
+  "action_items": [
+    "Optional: hub_pdf.py comparison verdict/range bars: use est['profile']['byproduct'] as the reference (to match the UI), or label it 'lowest-cost by-product'",
+    "Optional: StackBuilder headline for safety_block samples: do not quote a per-kg product cost",
+    "Optional: BeforeAfter legend: hide the 'after' entries when the sample is safety-blocked",
+    "Optional: Timeline chart: fix the overlap between the x-axis title and the legend"
+  ],
+  "critical_code_review_comments": [
+    "test_cost_hub_api.py still uses a top-level 'import fitz' (line 7), not pytest.importorskip as the note says. It works here because pymupdf is installed.",
+    "CostCharts ScenarioCards/WhatIf decide 'blocked' from est.auto_scenario === 'rejected', not est.safety_block. They are the same today, but safety_block is the field that is guaranteed."
+  ],
+  "updated_files": ["/app/backend/tests/test_cost_hub_api.py"],
+  "success_rate": {"backend": "100% (32/32)", "frontend": "100% of retest items (9/9); minor design notes only"},
+  "seed_data_creation": "None kept. The tests create and delete TEST_ conventional sources and a TEST_ scenario, and restore assumptions to batch_kg=1000. Checked afterwards: 6 sources, the 2 original saved scenarios, batch_kg=1000.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: export REACT_APP_BACKEND_URL=...; pytest /app/backend/tests/test_cost_hub_api.py -n 0. Sample IDs: DEMO-FIX-01=c7c4901c64ce (groundnut_cake, REVIEW), DEMO-AFLA-01=00820c6204b0 (groundnut_cake, FAIL), DEMO-CLEAN-01=458d81b9537a. Range sliders respond to focus+ArrowRight/Left, and mouse drag works. Chart cards use data-testid chart-{id} (chart-verdict, chart-before_after, chart-fix_finder, ...). pymupdf text in the PDF KPI table reads 'Product for food use None: ...' (label and value in separate cells)."
+}

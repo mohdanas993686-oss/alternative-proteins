@@ -42,7 +42,7 @@ export default function StackBuilder({ est, fixes, stack, setStack, problemFilte
   const last = flow[flow.length - 1];
   const steps = flow.slice(1, -1);
   const m = est.metrics.fixes;
-  const title = stack.length ? `Your ${stack.length}-step line keeps ${Math.round((last.mass / batch) * 100)}% of the batch and ${Math.round((last.protein / flow[0].protein) * 100)}% of the protein for ${money(m.per_kg_product)}/kg product`
+  const title = est.auto_scenario === "rejected" ? "Safety failure: no fix line applies; divert or reject, human review required" : stack.length ? `Your ${stack.length}-step line keeps ${Math.round((last.mass / batch) * 100)}% of the batch and ${Math.round((last.protein / flow[0].protein) * 100)}% of the protein for ${money(m.per_kg_product)}/kg product`
     : `No fixes yet: drag fixes onto the line (as-is cost ${money(m.per_kg_product)}/kg product)`;
   return (
     <ChartCard id="stack" eyebrow="Fix stack builder" title={title} cost focused={focused}

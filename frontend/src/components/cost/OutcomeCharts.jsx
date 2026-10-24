@@ -26,10 +26,10 @@ const PairRow = ({ p }) => {
   );
 };
 
-export const PairedBars = ({ items, testid = "paired-bars" }) => (
+export const PairedBars = ({ items, testid = "paired-bars", asIs }) => (
   <div data-testid={testid}>
     <ul className="divide-y divide-border/60">{items.map((p) => <PairRow key={p.key} p={p} />)}</ul>
-    <p className="mt-2 flex flex-wrap gap-3 text-[10.5px] text-muted-foreground"><span className="flex items-center gap-1"><span className="h-2 w-4 rounded bg-stone-400/70" />before</span><span className="flex items-center gap-1"><span className="h-2 w-4 rounded bg-emerald-600" />after, within limit</span><span className="flex items-center gap-1"><span className="h-2 w-4 rounded bg-rose-600" />after, outside limit</span><span className="flex items-center gap-1"><span className="h-3 border-l-2 border-dashed border-foreground/70" />placeholder limit</span></p>
+    <p className="mt-2 flex flex-wrap gap-3 text-[10.5px] text-muted-foreground"><span className="flex items-center gap-1"><span className="h-2 w-4 rounded bg-stone-400/70" />{asIs ? "measured" : "before"}</span><span className="flex items-center gap-1"><span className="h-2 w-4 rounded bg-emerald-600" />{asIs ? "within limit" : "after, within limit"}</span><span className="flex items-center gap-1"><span className="h-2 w-4 rounded bg-rose-600" />{asIs ? "outside limit (no fix applied)" : "after, outside limit"}</span><span className="flex items-center gap-1"><span className="h-3 border-l-2 border-dashed border-foreground/70" />placeholder limit</span></p>
   </div>
 );
 
@@ -44,7 +44,7 @@ export function BeforeAfter({ est, focused }) {
   return (
     <ChartCard id="before_after" eyebrow={rejected ? "Measured vs limits" : "Before vs after"} title={title} projected={!rejected} focused={focused}
       data={{ columns: ["Parameter", "Unit", "Before", "After (projected)", "Limit", "Within limit after"], rows: ba.map((p) => [p.label, p.unit, p.before, p.after, p.limit, p.pass_after ? "yes" : "no"]) }}>
-      <PairedBars items={ba} />
+      <PairedBars items={ba} asIs={rejected} />
     </ChartCard>
   );
 }
@@ -86,12 +86,12 @@ export function Timeline({ est, hl, focused }) {
   return (
     <ChartCard id="timeline" eyebrow="Status timeline" title={title} focused={focused}
       data={{ columns: ["Task", "Start h", "End h", "Mandatory"], rows: t.map((x) => [x.task, x.start, x.end, x.mandatory ? "yes" : "no"]) }}>
-      <Plot testid="timeline-plot" height={Math.max(220, t.length * 42 + 80)}
+      <Plot testid="timeline-plot" height={Math.max(260, t.length * 42 + 130)}
         data={Object.entries(KIND).map(([k, [c, n]]) => { const xs = t.filter((x) => x.kind === k); return {
           type: "bar", orientation: "h", name: n, y: xs.map((x) => x.task), x: xs.map((x) => Math.max(x.end - x.start, 0.5)), base: xs.map((x) => x.start),
           marker: { color: c, line: { width: xs.map((x) => (hl && x.fix_id === hl ? 3 : 0)), color: "#e7b416" }, pattern: { shape: k === "retest" ? "/" : k === "review" ? "." : "" } },
           hovertemplate: "%{y}<br>%{base:.0f} h → %{x:.0f} h duration<extra></extra>" }; }).filter((tr) => tr.y.length)}
-        layout={{ barmode: "overlay", yaxis: { autorange: "reversed", automargin: true, categoryorder: "array", categoryarray: t.map((x) => x.task) }, xaxis: { title: { text: "Hours from start" } }, margin: { l: 10, r: 10, t: 10, b: 60 },
+        layout={{ barmode: "overlay", yaxis: { autorange: "reversed", automargin: true, categoryorder: "array", categoryarray: t.map((x) => x.task) }, xaxis: { title: { text: "Hours from start", standoff: 6 } }, legend: { orientation: "h", y: -0.38, yanchor: "top" }, margin: { l: 10, r: 10, t: 24, b: 110 },
           shapes: gate ? [{ type: "line", x0: gate.end, x1: gate.end, yref: "paper", y0: 0, y1: 1, line: { color: "#d97706", dash: "dash", width: 2 } }] : [],
           annotations: gate ? [{ x: gate.end, yref: "paper", y: 1.06, text: "◆ mandatory safety gate", showarrow: false, font: { size: 10, color: "#b45309" } }] : [] }} />
     </ChartCard>

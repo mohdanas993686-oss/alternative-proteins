@@ -354,7 +354,8 @@ def cost_section(est, comp, ss=None):
     el += [_table(sc, [50 * mm, 40 * mm, 50 * mm, 40 * mm]), Spacer(1, 8)]
     if comp:
         v = comp["verdict"]
-        ref = v["best"] if v else None
+        keys = {i["key"] for i in comp["items"]}
+        ref = est["profile"]["byproduct"] if est["profile"]["byproduct"] in keys else (v["best"] if v else None)
         rows = []
         bestr = next((i["per_kg_dig"] for i in comp["items"] if i["key"] == ref), None)
         for i in sorted(comp["items"], key=lambda i: i["per_kg_dig"]["typical"]):
@@ -362,10 +363,20 @@ def cost_section(est, comp, ss=None):
             rel = "reference" if i["key"] == ref else ("comparable" if not bestr else
                   "cheaper" if r["high"] < bestr["low"] else "more expensive" if r["low"] > bestr["high"] else "comparable")
             rows.append((i["name"], r["low"], r["typical"], r["high"], REL_COL[rel], f"({rel})"))
-        el += [hbars(rows, "Cost per kg digestible protein, INR (range bars; overlapping = comparable)"), Spacer(1, 4)]
-        if v:
-            el += [Paragraph("<b>Verdict:</b> " + v["text"].replace("₹", "INR "), ss["BodyText"]), Spacer(1, 4)]
+        el += [hbars(rows, "Cost per kg digestible protein, INR (range bars vs this by-product; overlapping = comparable)"), Spacer(1, 4)]
+        if v and ref:
+            el += [Paragraph(_verdict(comp["items"], ref, v), ss["BodyText"]), Spacer(1, 4)]
     return el
+
+
+def _verdict(items, ref, v):
+    it = {i["key"]: i for i in items}
+    b, c = it[ref]["per_kg_dig"], it[v["reference"]]["per_kg_dig"]
+    rel = "cheaper" if b["high"] < c["low"] else "more expensive" if b["low"] > c["high"] else "comparable"
+    word = {"cheaper": "lower cost than", "more expensive": "higher cost than", "comparable": "comparable with"}[rel]
+    tag = "lowest-cost by-product" if ref == v["best"] else "selected by-product"
+    return (f"<b>Verdict ({tag}):</b> {it[ref]['name']}: estimated INR {b['low']:,.0f}-{b['high']:,.0f} per kg digestible protein vs "
+            f"INR {c['low']:,.0f}-{c['high']:,.0f} for {it[v['reference']]['name'].lower()}: {word} it under current assumptions.")
 
 
 def render_hub(est, comp, title):
