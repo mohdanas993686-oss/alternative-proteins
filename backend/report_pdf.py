@@ -21,7 +21,7 @@ def _v(x, d=2):
     return "-" if x is None else f"{x:.{d}f}"
 
 
-def render(r):
+def render(r, extra=None):
     buf = BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm, topMargin=15 * mm, bottomMargin=15 * mm)
     ss = getSampleStyleSheet()
@@ -38,7 +38,13 @@ def render(r):
     el += [_table([["", "", "", ""]] + meta, [28 * mm, 55 * mm, 28 * mm, 69 * mm]), Spacer(1, 8)]
     el += [Paragraph(f"<b>Overall screening status:</b> <font color='{STATUS_COL[r['overall_status']]}'>{r['overall_status']}</font> &nbsp; "
                      f"<b>Suitability score:</b> {sc['score']}/100 &nbsp; <b>Usable protein (safety-adjusted):</b> {sc['usable_protein_g_per_kg']} g/kg", ss["BodyText"]),
-           Paragraph(sc["explanation"], small), Spacer(1, 8)]
+           Paragraph(sc["explanation"], small)]
+    cs = r.get("cost_summary")
+    if cs:
+        p, d = cs["per_kg_protein"], cs["per_kg_dig"]
+        el.append(Paragraph(f"<b>Cost per kg of protein (illustrative, {cs['basis']}):</b> INR {p['low']:,.0f}-{p['high']:,.0f} "
+                            f"(INR {d['low']:,.0f}-{d['high']:,.0f} per kg digestible protein). Illustrative, replace with real quotes.", small))
+    el.append(Spacer(1, 8))
     for title, items in (("Composition profile", r["composition"]), ("Anti-nutritional factors", r["anf"])):
         rows = [["Target", "Value", "Unit", "± error", "Source", "Note"]]
         for c in items:
@@ -56,5 +62,7 @@ def render(r):
         el += [Paragraph("Retest flags", ss["Heading3"]), _table(rows, [40 * mm, 18 * mm, 122 * mm])]
     if r["human_review_required"]:
         el += [Spacer(1, 6), Paragraph("<b>Human review required</b> before any decision on this sample.", warn)]
+    if extra:
+        el += [Spacer(1, 10)] + extra
     doc.build(el)
     return buf.getvalue()

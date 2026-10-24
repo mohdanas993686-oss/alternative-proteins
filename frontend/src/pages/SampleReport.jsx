@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Download, FlaskConical, UserCheck, ArrowLeft, Calculator, AlertTriangle } from "lucide-react";
+import { Download, FlaskConical, UserCheck, ArrowLeft, Calculator, AlertTriangle, Coins } from "lucide-react";
 import { toast } from "sonner";
 import { api, API, errMsg, fmt } from "@/lib/api";
 import { PageHeader, Section, CardSkeleton, StatusBadge, SourceBadge, Term, Note, Empty } from "@/components/common";
@@ -91,6 +91,7 @@ export default function SampleReport() {
             <DialogTrigger asChild><button data-testid="add-lab-results-btn" className="inline-flex items-center gap-2 rounded-full border bg-card px-4 py-2 text-sm font-semibold hover:bg-accent"><FlaskConical className="h-4 w-4" /> Add lab results</button></DialogTrigger>
             <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto"><DialogHeader><DialogTitle>Lab / rapid-test results for {s.sample_code}</DialogTitle></DialogHeader><LabResultsForm sampleId={id} onSaved={() => { setLabOpen(false); load(); }} /></DialogContent>
           </Dialog>
+          <Link data-testid="open-hub-btn" to={`/hub?sample=${id}`} className="inline-flex items-center gap-2 rounded-full border bg-card px-4 py-2 text-sm font-semibold hover:bg-accent"><Coins className="h-4 w-4" /> Fixes & cost</Link>
           <a data-testid="export-pdf-btn" href={`${API}/report/${id}/pdf`} className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"><Download className="h-4 w-4" /> Export PDF</a>
         </>} />
 

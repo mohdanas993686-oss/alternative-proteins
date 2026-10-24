@@ -22,6 +22,18 @@ CREATE TABLE IF NOT EXISTS agent_logs (
 CREATE TABLE IF NOT EXISTS chat_messages (
   id TEXT PRIMARY KEY, session_id TEXT, role TEXT, content TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
+CREATE TABLE IF NOT EXISTS fix_catalogue (
+  id TEXT PRIMARY KEY, problem TEXT, method TEXT, action TEXT, byproducts TEXT, cost_low REAL, cost_typical REAL,
+  cost_high REAL, protein_recovery REAL, mass_yield REAL, time_h REAL, equipment TEXT, retest TEXT, status TEXT,
+  effectiveness REAL, scale_ease REAL, digestibility_gain REAL, effects TEXT, side_stream TEXT, note TEXT,
+  created_at TEXT, updated_at TEXT);
+CREATE TABLE IF NOT EXISTS conventional_sources (
+  id TEXT PRIMARY KEY, key TEXT, name TEXT, price_low REAL, price_typical REAL, price_high REAL, protein_pct REAL,
+  digestibility REAL, quality_basis TEXT, allergen_risk REAL, allergen_note TEXT, flavour REAL, supply REAL,
+  regulatory REAL, price_source TEXT, price_date TEXT, assumption TEXT, placeholder INTEGER DEFAULT 1,
+  created_at TEXT, updated_at TEXT);
+CREATE TABLE IF NOT EXISTS saved_scenarios (
+  id TEXT PRIMARY KEY, name TEXT, context TEXT, fixes TEXT, overrides TEXT, summary TEXT, created_at TEXT);
 CREATE INDEX IF NOT EXISTS ix_pred ON predictions(sample_id);
 CREATE INDEX IF NOT EXISTS ix_lab ON lab_results(sample_id);
 CREATE INDEX IF NOT EXISTS ix_log ON agent_logs(run_id);
@@ -39,6 +51,9 @@ def _conn():
 def init():
     with closing(_conn()) as c:
         c.executescript(SCHEMA)
+        cols = {r[1] for r in c.execute("PRAGMA table_info(samples)").fetchall()}
+        if "parent_sample_id" not in cols:
+            c.execute("ALTER TABLE samples ADD COLUMN parent_sample_id TEXT")
         c.commit()
 
 

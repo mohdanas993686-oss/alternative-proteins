@@ -4,7 +4,7 @@ from datetime import date, timedelta, datetime, timezone
 import numpy as np
 import db
 from ml import predictor
-from ml.synth import BYPRODUCTS, simulate_scan
+from ml.synth import BYPRODUCTS, simulate_scan, spectrum_from_targets
 
 SUPPLIERS = ["Demo Agro Processors (Rajasthan)", "Sample Oil Mills Co. (Gujarat)", "Example Dal Mill (MP)",
              "Placeholder Nut Works (Punjab)", "Test Rice Mills (Andhra Pradesh)"]
@@ -101,3 +101,41 @@ def seed():
                                 "Seeded demo sample (synthetic).", spec, "Simulated NIR scan")
             scenario(i, sid, t, bp)
             i += 1
+
+
+COST_DEMO = [
+    ("DEMO-CLEAN-01", "guar_meal", 901, "Clean batch (cost demo): passes screening first time.",
+     {"protein": 53, "oil": 3.5, "moisture": 8, "fibre_total": 15, "fibre_soluble": 4.5, "fibre_insoluble": 10.5, "gum": 5,
+      "phytate": 14, "tannins": 3, "trypsin_inhibitor": 8},
+     [("protein", 53.2, "Kjeldahl"), ("oil", 3.4, "Soxhlet"), ("fibre_total", 15.1, "AOAC enzymatic-gravimetric"), ("gum", 4.8, "Enzymatic assay"),
+      ("phytate", 14.2, "Spectrophotometric"), ("tannins", 2.9, "Folin-Ciocalteu"), ("trypsin_inhibitor", 7.5, "AACC 22-40"), ("saponins", 3.0, "Gravimetric"),
+      ("afb1", 1.5, "HPLC"), ("aflatoxin_total", 2.2, "HPLC"), ("apc", 18000, "Plate count"), ("yeast_mould", 150, "Plate count"),
+      ("water_activity", 0.52, "Dew-point meter")],
+     [("salmonella", "not_detected", "Culture"), ("e_coli", "not_detected", "PCR")]),
+    ("DEMO-FIX-01", "groundnut_cake", 902, "Needs fixes (cost demo): high oil, ANFs and microbial load.",
+     {"protein": 46, "oil": 10.5, "moisture": 9, "fibre_total": 12, "fibre_soluble": 1.8, "fibre_insoluble": 10.2, "gum": 0.1,
+      "phytate": 23, "tannins": 5, "trypsin_inhibitor": 19},
+     [("protein", 45.8, "Kjeldahl"), ("oil", 10.4, "Soxhlet"), ("phytate", 23.5, "Spectrophotometric"), ("trypsin_inhibitor", 18.6, "AACC 22-40"),
+      ("tannins", 4.8, "Folin-Ciocalteu"), ("afb1", 3.2, "HPLC"), ("aflatoxin_total", 4.5, "HPLC"), ("apc", 260000, "Plate count"),
+      ("yeast_mould", 3200, "Plate count"), ("water_activity", 0.70, "Dew-point meter"), ("moisture", 11.2, "Oven drying")],
+     [("salmonella", "not_detected", "Culture"), ("e_coli", "not_detected", "PCR"), ("allergen_peanut", "detected", "ELISA")]),
+    ("DEMO-AFLA-01", "groundnut_cake", 903, "Failed on aflatoxin (cost demo): divert or reject, human review required.",
+     {"protein": 47, "oil": 8, "moisture": 8, "fibre_total": 12, "fibre_soluble": 1.8, "fibre_insoluble": 10.2, "gum": 0.1,
+      "phytate": 18, "tannins": 5, "trypsin_inhibitor": 14},
+     [("protein", 47.1, "Kjeldahl"), ("afb1", 24.6, "HPLC"), ("aflatoxin_total", 31.8, "HPLC"), ("apc", 90000, "Plate count"),
+      ("yeast_mould", 900, "Plate count"), ("water_activity", 0.62, "Dew-point meter")],
+     [("salmonella", "not_detected", "Culture"), ("e_coli", "not_detected", "Culture"), ("allergen_peanut", "detected", "ELISA")]),
+]
+
+
+def seed_cost_demo():
+    for i, (code, bp, rs, note, t, nums, cats) in enumerate(COST_DEMO):
+        if db.one("SELECT id FROM samples WHERE sample_code=?", (code,)):
+            continue
+        spec = spectrum_from_targets(np.random.default_rng(rs), t)
+        sid = create_sample(code, bp, SUPPLIERS[i], f"DEMO-C{i + 1:02d}", (date.today() - timedelta(days=1 + i)).isoformat(),
+                            STORAGE[i], note, spec, "Simulated NIR scan")
+        for tg, v, m in nums:
+            lab(sid, tg, v, method=m)
+        for tg, res, m in cats:
+            lab(sid, tg, result=res, method=m, confirmation="Confirmed" if not tg.startswith("allergen") else None)

@@ -20,7 +20,23 @@ Strict rules:
 - Any positive, uncertain or failing safety result must be described as needing human review.
 - ANF values predicted by NIR are unreliable; recommend lab assays for phytate, tannins and trypsin inhibitors.
 - Be concise and plain-language for non-technical users (students, lab staff, food technologists).
+- Costs are illustrative PLACEHOLDER assumptions (INR); you cannot change price assumptions, the fix catalogue or lab results.
+- Never say a fix or reprocessing makes a batch "safe". Safety failures (aflatoxin, pathogen, allergen): divert or reject, human review required.
+- Only call a by-product "cheaper" than a conventional source if compare_cost reports relation "cheaper" (ranges do not overlap); otherwise say "comparable" or "more expensive".
 Format: plain text, short section headings ending with a colon, bullet lines starting with "- ". No markdown tables, no ** or #."""
+
+CHARTS = {"fix_finder": "Fix Finder", "heatmap": "Fix heatmap", "bubble": "Fix value bubble chart", "fix_radar": "Fix radar",
+          "stack": "Fix stack builder", "before_after": "Before vs after", "gauges": "After-fix gauges", "timeline": "Fix timeline",
+          "sankey_mass": "Mass flow Sankey", "sankey_protein": "Protein flow Sankey", "waterfall": "Cost waterfall",
+          "sunburst": "Where the money goes", "scenarios": "Scenario comparison", "whatif": "What-if panel", "tornado": "Tornado chart",
+          "monte_carlo": "Monte Carlo cost band", "batch_curve": "Cost vs batch size", "cost_race": "Cost race", "range_bars": "Range bars",
+          "value_scatter": "Value scatter", "breakeven": "Break-even chart", "serving": "25 g protein plate", "criteria_radar": "Multi-criteria radar",
+          "rank_change": "Rank-change chart", "verdict": "Verdict card"}
+CHART_WORDS = {"waterfall": "waterfall", "sankey": "sankey_mass", "protein flow": "sankey_protein", "tornado": "tornado", "monte carlo": "monte_carlo",
+               "heatmap": "heatmap", "bubble": "bubble", "fix finder": "fix_finder", "race": "cost_race", "break-even": "breakeven", "breakeven": "breakeven",
+               "sunburst": "sunburst", "treemap": "sunburst", "where the money": "sunburst", "scatter": "value_scatter", "serving": "serving",
+               "batch size": "batch_curve", "timeline": "timeline", "gantt": "timeline", "before": "before_after", "gauge": "gauges",
+               "scenario": "scenarios", "verdict": "verdict", "radar": "criteria_radar", "rank": "rank_change", "range": "range_bars", "stack": "stack"}
 
 TOOL_DOCS = {
     "get_sample": "get_sample(id): fetch sample details, history and existing lab results",
@@ -30,6 +46,10 @@ TOOL_DOCS = {
     "find_missing_data": "find_missing_data(id): list lab results still needed for a complete report",
     "generate_report": "generate_report(id): build the final report draft (score, flags, composition)",
     "suggest_retests": "suggest_retests(id): propose lab tests to repeat or confirm",
+    "get_fix_options": "get_fix_options(id): detected problems, corrective-action options with cost/kg, protein loss and retests",
+    "estimate_cost": "estimate_cost(id, selected_fixes): illustrative cost per kg product / protein / digestible protein; selected_fixes = list of fix ids or [] for recommended",
+    "compare_cost": "compare_cost(ids): cost per kg digestible protein vs conventional sources (soy, whey, pea, pulses); ids empty = by-product types",
+    "open_chart": "open_chart(chart): open/highlight a chart in the Cost & Fix Hub. chart one of: " + ", ".join(CHARTS),
 }
 
 BANNED = [
@@ -42,6 +62,7 @@ BANNED = [
     (re.compile(r"\b(salmonella|aflatoxin|mycotoxin|toxin|contaminant|allergen|microbe|bacteria|e\. ?coli|listeria)[- ]free\b", re.I), r"\1 not detected by this test"),
     (re.compile(r"\bfree (of|from) (pathogens|salmonella|aflatoxins?|toxins|contamination|allergens|microbes)\b", re.I), r"\2 not detected by this test"),
     (re.compile(r"\babsent\b", re.I), "not detected by this test"),
+    (re.compile(r"\b(make|makes|making|made|render|renders|become|becomes)( (it|them|the batch|the sample|this batch|this sample|the material))? safe\b", re.I), "[no fix can make a batch safe: divert or reject, human review required]"),
 ]
 
 
@@ -157,9 +178,64 @@ def suggest_retests(id):
     return {"retests": r["retests"]}
 
 
+def get_fix_options(id):
+    import costs
+    s = _resolve(id)
+    est = costs.estimate({"sample_id": s["id"]}, None, {}, light=True)
+    import fixes as fx
+    cat = fx.catalogue_map()
+    return {"problems": [{k: p[k] for k in ("label", "category", "status", "message", "cause")} for p in est["problems"]],
+            "options": {p: [{"id": i, "action": cat[i]["action"], "status": cat[i]["status"], "cost_per_kg_typical_inr": cat[i]["cost_typical"],
+                             "protein_loss_pct": cat[i]["protein_loss_pct"], "retest": cat[i]["retest"]} for i in ids] for p, ids in est["options"].items()},
+            "recommended": est["recommended"], "safety_block": est["safety_block"],
+            "note": "Safety failures have no reprocessing fix: divert or reject, human review required. Costs are placeholder assumptions."}
+
+
+def estimate_cost(id, selected_fixes=None):
+    import costs
+    s = _resolve(id)
+    est = costs.estimate({"sample_id": s["id"]}, selected_fixes or None, {}, light=True)
+    m, r = est["metrics"], est["metrics"]["ranges"]
+    rd = lambda x: None if x is None else round(x, 1)
+    return {"scenario": est["scenario"], "fixes_used": est["fixes_used"], "safety_block": est["safety_block"],
+            "per_kg_product_inr": {k: rd(v) for k, v in r["per_kg_product"].items()}, "per_kg_protein_inr": {k: rd(v) for k, v in r["per_kg_protein"].items()},
+            "per_kg_digestible_protein_inr": {k: rd(v) for k, v in r["per_kg_dig"].items()}, "expected_per_kg_digestible_protein_inr": rd(m["expected"]["per_kg_dig"]),
+            "mass_yield_pct": rd(m["fixes"]["mass_yield_pct"]), "retests_required": est["retest_lines"],
+            "scenarios": [{"name": c["name"], "total_inr": rd(c["total"])} for c in est["scenarios"]],
+            "note": "Illustrative, replace with real quotes."}
+
+
+def compare_cost(ids=None):
+    import costs
+    if ids:
+        rows = []
+        for i in ids:
+            s = _resolve(i)
+            est = costs.estimate({"sample_id": s["id"]}, None, {}, light=True)
+            rows.append({"sample": s["sample_code"], "scenario": est["scenario"],
+                         "per_kg_digestible_protein_inr": {k: round(v, 1) for k, v in est["metrics"]["ranges"]["per_kg_dig"].items() if v is not None}})
+        return {"ranking": sorted(rows, key=lambda x: x["per_kg_digestible_protein_inr"].get("typical", 1e9)), "note": "Illustrative, replace with real quotes."}
+    c = costs.comparison()
+    ranking = sorted(({"name": i["name"], "kind": i["kind"], "per_kg_digestible_protein_inr": {k: round(v) for k, v in i["per_kg_dig"].items()}}
+                      for i in c["items"]), key=lambda x: x["per_kg_digestible_protein_inr"]["typical"])
+    return {"ranking": ranking, "verdict": c["verdict"], "caveat": c["caveat"], "note": "Illustrative, replace with real quotes."}
+
+
+def open_chart(chart, id=None):
+    key = chart if chart in CHARTS else CHART_WORDS.get(str(chart).lower(), "waterfall")
+    q = f"focus={key}"
+    if id:
+        try:
+            q += f"&sample={_resolve(id)['id']}"
+        except ValueError:
+            pass
+    return {"chart": key, "label": CHARTS[key], "url": f"/hub?{q}", "action": "open_chart"}
+
+
 TOOLS = {"get_sample": get_sample, "run_prediction": run_prediction, "check_safety_rules": check_safety_rules,
          "compare_byproducts": compare_byproducts, "find_missing_data": find_missing_data,
-         "generate_report": generate_report, "suggest_retests": suggest_retests}
+         "generate_report": generate_report, "suggest_retests": suggest_retests, "get_fix_options": get_fix_options,
+         "estimate_cost": estimate_cost, "compare_cost": compare_cost, "open_chart": open_chart}
 
 
 def summarize(tool, res):
@@ -184,6 +260,16 @@ def summarize(tool, res):
         return f"Suitability score {res['suitability_score']}/100 · usable protein {res['usable_protein_g_per_kg']} g/kg · overall {res['overall_status']}"
     if tool == "suggest_retests":
         return f"{len(res['retests'])} retest/confirmation(s) proposed"
+    if tool == "get_fix_options":
+        return f"{len(res['problems'])} problem(s): " + ", ".join(p["label"] for p in res["problems"][:4]) + (" · safety block: divert or reject" if res["safety_block"] else "")
+    if tool == "estimate_cost":
+        d = res["per_kg_digestible_protein_inr"]
+        return f"Scenario {res['scenario']} · ₹{d['low']:,.0f}–{d['high']:,.0f} per kg digestible protein (illustrative)" if d.get("low") else f"Scenario {res['scenario']}: no food product (divert or reject)"
+    if tool == "compare_cost":
+        v = res.get("verdict")
+        return v["text"] if v else "Ranking: " + ", ".join(r["sample"] for r in res["ranking"][:4])
+    if tool == "open_chart":
+        return f"Opened chart: {res['label']}"
     return "done"
 
 
@@ -195,6 +281,10 @@ REASONS = {
     "suggest_retests": "Propose tests to repeat or confirm, based on flags, anomalies and unreliable ANF predictions.",
     "generate_report": "Assemble the report draft and suitability score.",
     "compare_byproducts": "Rank by-products/samples by suitability score using the same scoring rules.",
+    "get_fix_options": "Map the flags to problem types and list corrective-action options from the fix catalogue.",
+    "estimate_cost": "Estimate illustrative costs (placeholder INR) for the recommended or selected fixes.",
+    "compare_cost": "Compare cost per kg digestible protein with conventional sources using ranges.",
+    "open_chart": "Open the requested chart in the Cost & Fix Hub so the user can see it.",
 }
 
 
@@ -291,6 +381,18 @@ def _keyword_plan(message, sample_id):
     if found and db.one("SELECT id FROM samples WHERE lower(sample_code)=?", (found.group(1),)):
         sid = found.group(1)
     plan = []
+    if any(w in m for w in ("show", "open", "display", "chart")):
+        key = next((v for k, v in CHART_WORDS.items() if k in m), None)
+        if key:
+            plan.append(("open_chart", {"chart": key, "id": sid}, REASONS["open_chart"]))
+            return plan
+    if any(w in m for w in ("cheaper", "soy", "whey", "pea", "conventional", "cost compar", "price")) and not found:
+        plan.append(("compare_cost", {"ids": []}, REASONS["compare_cost"]))
+        return plan
+    if sid and any(w in m for w in ("fix", "corrective", "reprocess", "treat", "cost")):
+        plan.append(("get_fix_options", {"id": sid}, REASONS["get_fix_options"]))
+        plan.append(("estimate_cost", {"id": sid, "selected_fixes": []}, REASONS["estimate_cost"]))
+        return plan
     if any(w in m for w in ("best", "rank", "compare", "which by-product", "which byproduct", "flour")) and not found:
         plan.append(("compare_byproducts", {"ids": []}, REASONS["compare_byproducts"]))
     if sid:
@@ -311,7 +413,7 @@ def _keyword_plan(message, sample_id):
 
 async def _llm_plan(message, sample_id, history, provider):
     sys = ("You plan tool calls for an analysis agent. Available tools:\n" + "\n".join(TOOL_DOCS.values()) +
-           '\nReturn ONLY JSON: {"steps":[{"tool":"name","args":{"id":"..."} or {"ids":[...]},"reason":"short why"}]} with 1-5 steps. '
+           '\nReturn ONLY JSON: {"steps":[{"tool":"name","args":{"id":"..."} or {"ids":[...]} or {"chart":"waterfall"},"reason":"short why"}]} with 1-5 steps. '
            "Sample ids may be internal ids or sample codes like GUA-001.")
     ctx = f"Current sample in view: {sample_id or 'none'}\nRecent conversation: {history}\nUser question: {message}"
     raw = await llm_complete(sys, ctx, provider)
@@ -321,8 +423,15 @@ async def _llm_plan(message, sample_id, history, provider):
         t, a = st.get("tool"), st.get("args") or {}
         if t not in TOOLS:
             continue
-        a = {"ids": list(a.get("ids") or [])} if t == "compare_byproducts" else {"id": a.get("id") or sample_id}
-        if t != "compare_byproducts" and not a["id"]:
+        if t in ("compare_byproducts", "compare_cost"):
+            a = {"ids": list(a.get("ids") or [])}
+        elif t == "open_chart":
+            a = {"chart": str(a.get("chart") or "waterfall"), "id": a.get("id") or sample_id}
+        elif t == "estimate_cost":
+            a = {"id": a.get("id") or sample_id, "selected_fixes": [str(x) for x in (a.get("selected_fixes") or [])]}
+        else:
+            a = {"id": a.get("id") or sample_id}
+        if t not in ("compare_byproducts", "compare_cost", "open_chart") and not a["id"]:
             continue
         plan.append((t, a, st.get("reason") or REASONS[t]))
     return plan

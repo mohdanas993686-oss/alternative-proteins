@@ -4,7 +4,7 @@ import { useTheme } from "next-themes";
 
 const PlotBase = createPlotlyComponent(Plotly);
 
-export const Plot = ({ data, layout = {}, height = 320, testid }) => {
+export const Plot = ({ data, layout = {}, height = 320, testid, onClick, onHover, onUnhover }) => {
   const { resolvedTheme } = useTheme();
   const dark = resolvedTheme === "dark";
   const fg = dark ? "#e7e3da" : "#1c2b22";
@@ -28,6 +28,9 @@ export const Plot = ({ data, layout = {}, height = 320, testid }) => {
             angularaxis: { gridcolor: grid, linecolor: grid, ...(layout.polar.angularaxis || {}) } } : undefined,
         }}
         config={{ displaylogo: false, responsive: true, modeBarButtonsToRemove: ["lasso2d", "select2d"] }}
+        onClick={onClick}
+        onHover={onHover}
+        onUnhover={onUnhover}
         useResizeHandler
         style={{ width: "100%" }}
       />

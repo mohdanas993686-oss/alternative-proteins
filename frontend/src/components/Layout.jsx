@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { NavLink, Outlet, Link } from "react-router-dom";
 import { useTheme } from "next-themes";
-import { LayoutDashboard, FlaskConical, ListChecks, BarChart3, BrainCircuit, Bot, SlidersHorizontal, Map, Moon, Sun, Menu, X, Plus, Sprout, Blend } from "lucide-react";
+import { LayoutDashboard, FlaskConical, ListChecks, BarChart3, BrainCircuit, Bot, SlidersHorizontal, Map, Moon, Sun, Menu, X, Plus, Sprout, Blend, Coins } from "lucide-react";
 import { SafetyBanner, DemoBadge } from "@/components/common";
 
 const NAV = [
@@ -10,6 +10,7 @@ const NAV = [
   ["/samples", "Samples", ListChecks],
   ["/compare", "Compare", BarChart3],
   ["/blender", "Blender", Blend],
+  ["/hub", "Cost & Fix Hub", Coins],
   ["/models", "Model performance", BrainCircuit],
   ["/agent", "Analysis Agent", Bot],
   ["/rules", "Safety rules", SlidersHorizontal],
@@ -30,7 +31,7 @@ const ThemeToggle = () => {
 const Nav = ({ onNavigate }) => (
   <nav className="flex flex-col gap-1" aria-label="Main">
     {NAV.map(([to, label, Icon]) => (
-      <NavLink key={to} to={to} end={to === "/"} onClick={onNavigate} data-testid={`nav-${label.toLowerCase().replace(/\s+/g, "-")}`}
+      <NavLink key={to} to={to} end={to === "/"} onClick={onNavigate} data-testid={`nav-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
         className={({ isActive }) => `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${isActive ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}>
         <Icon className="h-4 w-4" /> {label}
       </NavLink>
